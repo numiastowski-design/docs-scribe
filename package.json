@@ -1,0 +1,48 @@
+{
+  "name": "docs-scribe",
+  "version": "0.3.0",
+  "description": "Reads Word, PowerPoint, Excel and Google exports into a structured representation, and checks that no word was lost on the way.",
+  "keywords": [
+    "docx",
+    "pptx",
+    "xlsx",
+    "ooxml",
+    "text-extraction",
+    "document-parser",
+    "word-conservation"
+  ],
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/numiastowski-design/docs-scribe.git"
+  },
+  "homepage": "https://miksumia.com",
+  "bugs": {
+    "email": "contact@miksumia.com"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/types/packages/doc-read/src/lib/docs.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./light": {
+      "types": "./dist/types/packages/doc-read/src/lib/docs-light.d.ts",
+      "import": "./dist/light.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "parse5": "^8.1.0"
+  }
+}
