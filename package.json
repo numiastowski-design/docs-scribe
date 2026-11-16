@@ -1,6 +1,6 @@
 {
   "name": "docs-scribe",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Reads Word, PowerPoint, Excel and Google exports into a structured representation, and checks that no word was lost on the way.",
   "keywords": [
     "docx",
@@ -43,6 +43,6 @@
     "LICENSE"
   ],
   "dependencies": {
-    "parse5": "^8.1.0"
+    "parse5": "^8.1.1"
   }
 }

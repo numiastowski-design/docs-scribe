@@ -87,6 +87,10 @@ groups; // [{ cause: "text", words: [...] }, { cause: "diagram", words: [...] }]
 - **An Excel formula gives its last cached value**, not a recomputation: a file saved by a tool that
   cached none has empty cells, counted and named by a `formula-cells-empty` notice.
 - **Tracked changes are published in their accepted state**: an insertion is kept, a deletion is gone.
+- **A chart that carries no copy of its values is read from its sheet** (0.4.0), within a ceiling on the
+  cells it may read. Two defects are known in 0.4.0 and will be fixed in 0.4.1: a range shared by
+  several series is counted once per series, so a large chart can be set aside although it fits; and a
+  chart set aside by that ceiling comes out as its title and an empty table, with no notice saying so.
 
 ## The paper this reader is built on
 
@@ -126,6 +130,6 @@ sees and the reader loses. That is what the conservation check above exists to m
 
 AGPL-3.0-or-later: run a modified version as a network service and its source must be available to its
 users. This repository is that source — a snapshot of the packages the npm bundle is built from, taken
-from the development monorepo at version 0.3.1 (14 November 2026). The entry points are
+from the development monorepo at version 0.4.0 (16 November 2026). The entry points are
 `packages/doc-read/src/lib/docs.ts` and `packages/doc-read/src/lib/docs-light.ts`; the npm package ships
 the bundle built from them. Questions: <contact@miksumia.com>.
