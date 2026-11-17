@@ -24,7 +24,17 @@ import { documentCacheOf } from "./document-cache";
 import { flateImageObjectOf } from "./pdf-flate-images";
 import { jpegImageObjectOf } from "./pdf-jpeg-images";
 import { ourOpsOfPage } from "./pdf-ops-ours";
-import { filteredGlyphs, GlyphBuilderAbstention, INVISIBLE_TEXT_MODES, readGlyphs, unreadFontKept, type FontScaleOf, type GlyphFragment, type HidePolicy, type SymbolFontOf } from "./glyph-positions";
+import {
+  filteredGlyphs,
+  GlyphBuilderAbstention,
+  INVISIBLE_TEXT_MODES,
+  readGlyphs,
+  unreadFontKept,
+  type FontScaleOf,
+  type GlyphFragment,
+  type HidePolicy,
+  type SymbolFontOf,
+} from "./glyph-positions";
 import { runsOfGlyphs } from "./glyph-runs";
 import { countShownGlyphs, dropsModeHidden, MAX_FILTERED_GLYPHS } from "./pdf-hidden-text";
 import { hasReadableText, linesFromItems } from "./pdf-lines";
@@ -288,14 +298,19 @@ export interface PdfSource {
  *  read the note at the end of the page. Rotated runs (wrong box) and artifacts take no part in the geometry. O(runs + order).
  *  Limit, written: a producer that tags its page footer as content (not `/Artifact`) puts that footer below the notes; the guard then refuses
  *  and the note stays where the tree declares it (review of d33a7c2f, 23/10/2026). */
-export const notesAfterText = (declaredOrder: readonly string[], runs: readonly PdfTextRun[], noteIds: ReadonlySet<string>): readonly string[] => {
+export const notesAfterText = (
+  declaredOrder: readonly string[],
+  runs: readonly PdfTextRun[],
+  noteIds: ReadonlySet<string>,
+): readonly string[] => {
   if (noteIds.size === 0) return declaredOrder;
   let highestNote = -Infinity;
   let lowestOther = Infinity;
   for (const run of runs) {
     if (run.rotated || run.artifact || run.text.trim().length === 0) continue;
     const middle = run.y + run.height / 2;
-    if (run.markedContentId !== undefined && noteIds.has(run.markedContentId)) highestNote = Math.max(highestNote, middle);
+    if (run.markedContentId !== undefined && noteIds.has(run.markedContentId))
+      highestNote = Math.max(highestNote, middle);
     else lowestOther = Math.min(lowestOther, middle);
   }
   if (highestNote === -Infinity || highestNote >= lowestOther) return declaredOrder;
@@ -389,7 +404,11 @@ export const HOIST_MAX_COMPARISONS = 2_000_000;
  *  lands after the first cluster that blocks it. `undefined` once the shared comparison budget is spent. A placed cluster without
  *  a box is a guard only: `clustersOf` grafts the first geometric id onto a leading geometry-less cluster, so one exists only on a page
  *  with no geometry at all, where nothing moves. */
-const landingIndex = (placed: readonly Cluster[], box: IdGeometry | undefined, budget: { left: number }): number | undefined => {
+const landingIndex = (
+  placed: readonly Cluster[],
+  box: IdGeometry | undefined,
+  budget: { left: number },
+): number | undefined => {
   if (box === undefined) return placed.length;
   let cursor = placed.length;
   while (cursor > 0) {
@@ -471,12 +490,25 @@ interface ReadPdfSourceOptions {
    * pictures of its pages without text, `pdf-open.ts`). The text of all pages is therefore read before
    * any operator list is built. `allHasText` is `PdfSourcePage.hasText` of every page, computed once here.
    */
-  wantOps?: ((pageIndex: number, runs: readonly PdfTextRun[], allRuns: readonly (readonly PdfTextRun[])[], allHasText: readonly boolean[]) => boolean) | undefined;
+  wantOps?:
+    | ((
+        pageIndex: number,
+        runs: readonly PdfTextRun[],
+        allRuns: readonly (readonly PdfTextRun[])[],
+        allHasText: readonly boolean[],
+      ) => boolean)
+    | undefined;
   /** Quelles pages paient la reconstruction des glyphes. Implique `wantOps`. */
-  wantGlyphs?: ((pageIndex: number, runs: readonly PdfTextRun[], allRuns: readonly (readonly PdfTextRun[])[], allHasText: readonly boolean[]) => boolean) | undefined;
+  wantGlyphs?:
+    | ((
+        pageIndex: number,
+        runs: readonly PdfTextRun[],
+        allRuns: readonly (readonly PdfTextRun[])[],
+        allHasText: readonly boolean[],
+      ) => boolean)
+    | undefined;
   cost?: ExtractionCost | undefined;
 }
-
 
 /** The most operators one page may carry. A content stream can inflate to hundreds of millions of operators, which
  *  saturates Forge's 512 MB or its 900 s, and the retry replays the same bomb; real pages are far below.
@@ -571,7 +603,8 @@ function trackFillColour(state: GraphicsStateStack<{ colour: string | undefined 
   if (op.op === "save") state.save();
   else if (op.op === "restore" || op.op === "paintFormXObjectEnd") state.restore();
   else if (op.op === "paintFormXObjectBegin") state.form((top) => ({ ...top }));
-  else if (op.op === "setFillRGBColor" && Array.isArray(op.args)) state.current.colour = typeof op.args[0] === "string" ? op.args[0] : state.current.colour;
+  else if (op.op === "setFillRGBColor" && Array.isArray(op.args))
+    state.current.colour = typeof op.args[0] === "string" ? op.args[0] : state.current.colour;
   else if (op.op === "setFillColourUnknown") state.current.colour = undefined;
 }
 
@@ -610,7 +643,10 @@ function paintedPicturesOf(ops: readonly PdfOp[]): {
   paintedByName: ReadonlyMap<string, { resources: PdfDict | undefined; stencil: boolean; colour: string | undefined }>;
 } {
   const scopesByName = new Map<string, Set<PdfDict | undefined>>();
-  const paintedByName = new Map<string, { resources: PdfDict | undefined; stencil: boolean; colour: string | undefined }>();
+  const paintedByName = new Map<
+    string,
+    { resources: PdfDict | undefined; stencil: boolean; colour: string | undefined }
+  >();
   // §8.6.8: the fill colour of a fresh page is BLACK, not « unknown » — a stencil painted without any colour
   // operator is black, and refusing it would lose a legitimate picture. `setFillColourUnknown` is what makes it
   // unknown: a colour set in a space we do not convert (`pdf-ops-ours.ts`).
@@ -630,7 +666,10 @@ function paintedPicturesOf(ops: readonly PdfOp[]): {
 /** The pixels of a DCT, Flate, CCITT or STENCIL picture of the page, by its object name, once decoded here. A name
  *  painted with two different resource scopes (the same name in a page and in a form) is NOT decoded: the picture
  *  would be a guess. */
-function ourImagesOf(ctx: ReadContext, ops: readonly PdfOp[]): { decoded: ReadonlyMap<string, unknown>; refusals: ReadonlyMap<string, PictureRefusal> } {
+function ourImagesOf(
+  ctx: ReadContext,
+  ops: readonly PdfOp[],
+): { decoded: ReadonlyMap<string, unknown>; refusals: ReadonlyMap<string, PictureRefusal> } {
   const { scopesByName, paintedByName } = paintedPicturesOf(ops);
   const decoded = new Map<string, unknown>();
   // Beside each picture we do NOT decode, the reason, read from what it declares (`pdf-image-refusal.ts`): a count
@@ -644,7 +683,7 @@ function ourImagesOf(ctx: ReadContext, ops: readonly PdfOp[]): { decoded: Readon
     }
     const scope = { resources: painted.resources };
     const rawName = painted.stencil ? resourceNameOf(name) : name;
-    const decode = ():DecodedImageObject | undefined =>
+    const decode = (): DecodedImageObject | undefined =>
       ccittImageObjectOf(ctx.ourDoc, ctx.file, scope, name, IMAGE_KIND.GRAYSCALE_1BPP) ??
       jpegImageObjectOf(ctx.ourDoc, scope, name, { rgb: IMAGE_KIND.RGB_24BPP, rgba: IMAGE_KIND.RGBA_32BPP }) ??
       flateImageObjectOf(ctx.ourDoc, scope, name, { rgb: IMAGE_KIND.RGB_24BPP, rgba: IMAGE_KIND.RGBA_32BPP });
@@ -658,7 +697,7 @@ function ourImagesOf(ctx: ReadContext, ops: readonly PdfOp[]): { decoded: Readon
     // 🔴 A STENCIL IS NOT CACHED, and the reason is the invariant just above: its pixels depend on the FILL COLOUR,
     // which is not in the stream. Cached by its stream, the same stamp painted red then blue would come back red.
     const image = painted.stencil
-      ? stencilImageObjectOf(ctx.ourDoc, scope, rawName,{ rgba: IMAGE_KIND.RGBA_32BPP }, painted.colour)
+      ? stencilImageObjectOf(ctx.ourDoc, scope, rawName, { rgba: IMAGE_KIND.RGBA_32BPP }, painted.colour)
       : documentCacheOf(ctx.ourDoc).getOrCompute<DecodedImageObject | undefined>(
           PICTURE,
           stream,
@@ -688,11 +727,21 @@ function scanHiddenCandidates(ops: readonly PdfOp[]): { candidate: boolean; name
   let namesLayer = false;
   for (const op of ops) {
     if (op.op === "setTextRenderingMode") {
-      const mode = Array.isArray(op.args) ? (op.args[0] as number | undefined) ?? 0 : 0;
+      const mode = Array.isArray(op.args) ? ((op.args[0] as number | undefined) ?? 0) : 0;
       if (INVISIBLE_TEXT_MODES.has(mode)) candidate = true;
-    } else if (op.op === "setFillRGBColor" && Array.isArray(op.args) && typeof op.args[0] === "string" && op.args[0].toLowerCase() === "#ffffff") {
+    } else if (
+      op.op === "setFillRGBColor" &&
+      Array.isArray(op.args) &&
+      typeof op.args[0] === "string" &&
+      op.args[0].toLowerCase() === "#ffffff"
+    ) {
       candidate = true;
-    } else if (op.op === "beginMarkedContentProps" && Array.isArray(op.args) && op.args[0] === "OC" && op.args[1] != null) {
+    } else if (
+      op.op === "beginMarkedContentProps" &&
+      Array.isArray(op.args) &&
+      op.args[0] === "OC" &&
+      op.args[1] != null
+    ) {
       namesLayer = candidate = true;
     }
   }
@@ -745,7 +794,8 @@ const normalizeUnicode = (text: string): string => text.normalize("NFKC");
 export function readPageText(ctx: ReadContext, pageIndex: number): PageText {
   const entry = ctx.ourDoc.pages()[pageIndex]!;
   const ops = ourOpsOfPage(ctx.ourDoc, entry, ctx.memo);
-  if (ops.length > PDF_MAX_OPS_PER_PAGE) throw new ReaderError("FILE_UNSAFE", "the PDF has a page with too many drawing operations to be read");
+  if (ops.length > PDF_MAX_OPS_PER_PAGE)
+    throw new ReaderError("FILE_UNSAFE", "the PDF has a page with too many drawing operations to be read");
   count(ctx.cost, "operatorsWalked", ops.length);
 
   const fonts = fontObjectsOfPage(ctx.ourDoc, entry);
@@ -779,7 +829,10 @@ export function readPageText(ctx: ReadContext, pageIndex: number): PageText {
     glyphs = [];
     glyphsUnavailable = textUnreadReasonOf(error);
   }
-  const runs = glyphsUnavailable === undefined ? runsOfGlyphs(glyphs, { pageObjId, view: [x0, y0, x1, y1], normalize: normalizeUnicode, sameFont }) : [];
+  const runs =
+    glyphsUnavailable === undefined
+      ? runsOfGlyphs(glyphs, { pageObjId, view: [x0, y0, x1, y1], normalize: normalizeUnicode, sameFont })
+      : [];
   resolveRunWeights(ourFont, runs);
   const reference = glyphsUnavailable === undefined ? referenceOfGlyphs(glyphs, pageObjId) : [];
   // What the caller will never ask for is not kept: the runs and the reference are built, and the second pass reads `ops` and `glyphs` only for a
@@ -851,13 +904,20 @@ export function textUnreadReasonOf(error: unknown): PdfTextUnreadReason {
 
 /** The glyphs of a page's operators, and the hide policy when the page holds hidden-text candidates. The operators are walked ONCE: the policy is
  *  decided from the glyphs read, then the same glyphs are filtered by it (a second walk doubled the cost of every page of an OCR'd scan). */
-function glyphsOfOps(ops: PdfOp[], ctx: ReadContext, fontScaleOf: FontScaleOf, symbolFontOf: SymbolFontOf): { glyphs: GlyphFragment[]; hide: HidePolicy | undefined; fontUnread: boolean } {
+function glyphsOfOps(
+  ops: PdfOp[],
+  ctx: ReadContext,
+  fontScaleOf: FontScaleOf,
+  symbolFontOf: SymbolFontOf,
+): { glyphs: GlyphFragment[]; hide: HidePolicy | undefined; fontUnread: boolean } {
   // Counted before building: a hostile page must not allocate its glyph objects just to be refused.
-  if (countShownGlyphs(ops) > MAX_FILTERED_GLYPHS) throw new ReaderError("FILE_UNSAFE", "the page has too many shown glyphs to be read");
+  if (countShownGlyphs(ops) > MAX_FILTERED_GLYPHS)
+    throw new ReaderError("FILE_UNSAFE", "the page has too many shown glyphs to be read");
   const { candidate, namesLayer } = scanHiddenCandidates(ops);
   const isLayerVisible = candidate ? visibilityOf(ctx, namesLayer) : undefined;
   const all = readGlyphs(ops, isLayerVisible, fontScaleOf, symbolFontOf);
-  const hide: HidePolicy | undefined = isLayerVisible === undefined ? undefined : { isLayerVisible, dropModeHidden: dropsModeHidden(all) };
+  const hide: HidePolicy | undefined =
+    isLayerVisible === undefined ? undefined : { isLayerVisible, dropModeHidden: dropsModeHidden(all) };
   return { glyphs: filteredGlyphs(all, hide), hide, fontUnread: unreadFontKept(all, hide) };
 }
 
@@ -866,17 +926,30 @@ function picturesOf(
   text: PageText,
   ctx: ReadContext,
   wantsOps: boolean,
-): { ops: PdfOp[]; decoded: ReadonlyMap<string, unknown>; painted: ReadonlySet<string>; refusals: ReadonlyMap<string, PictureRefusal> } {
+): {
+  ops: PdfOp[];
+  decoded: ReadonlyMap<string, unknown>;
+  painted: ReadonlySet<string>;
+  refusals: ReadonlyMap<string, PictureRefusal>;
+} {
   if (!wantsOps) return { ops: [], decoded: new Map(), painted: new Set(), refusals: new Map() };
   const ops = splitStencilsByColour(text.ops);
   // A stencil (`paintImageMaskXObject`) counts as painted: no decoder of ours reads one, and a picture that leaves
   //  the page must be able to SAY why (`imageRefusal` answers `mask` for it).
-  const painted = new Set(ops.filter((op) => op.op === "paintImageXObject" || op.op === "paintImageMaskXObject").map((op) => String((op.args as unknown[])[0])));
+  const painted = new Set(
+    ops
+      .filter((op) => op.op === "paintImageXObject" || op.op === "paintImageMaskXObject")
+      .map((op) => String((op.args as unknown[])[0])),
+  );
   return { ...ourImagesOf(ctx, ops), painted, ops };
 }
 
 /** The declared reading order and the notes of the page's structure tree, and the reference cycles with their notes marked. */
-function structureOf(text: PageText, ctx: ReadContext, entry: PdfPageEntry): { declaredOrder: string[]; noteIds: Set<string>; reference: PdfReferenceCycle[] } {
+function structureOf(
+  text: PageText,
+  ctx: ReadContext,
+  entry: PdfPageEntry,
+): { declaredOrder: string[]; noteIds: Set<string>; reference: PdfReferenceCycle[] } {
   const declared = declaredStructureOf(ctx.ourDoc, entry);
   const declaredOrder: string[] = [...(declared?.declaredOrder ?? [])];
   const noteIds = new Set<string>(declared?.noteIds ?? []);
@@ -920,7 +993,8 @@ export function readPageSource(text: PageText, pageIndex: number, wants: PageWan
     ops: wantsOps ? ops : [],
     ...(hide !== undefined ? { isLayerVisible: hide.isLayerVisible } : {}),
     readImage: (name: string) => readImageObject(store, name, IMAGE_KIND),
-    imageFailure: (name: string) => (painted.has(name) && readImageObject(store, name, IMAGE_KIND) === undefined ? "unreadable" : undefined),
+    imageFailure: (name: string) =>
+      painted.has(name) && readImageObject(store, name, IMAGE_KIND) === undefined ? "unreadable" : undefined,
     imageRefusal: (name: string) => (painted.has(name) ? refusals.get(name) : undefined),
     imageRef: (name: string) => readImageRef(store, name),
     glyphs,
@@ -928,7 +1002,7 @@ export function readPageSource(text: PageText, pageIndex: number, wants: PageWan
     ...(text.fontUnread === true ? { fontUnread: true as const } : {}),
     ...(declaredOrder.length > 0 ? { declaredOrder: hoistAgainstTree(declaredOrder, runs) } : {}),
     ...(noteIds.size > 0 ? { noteIds } : {}),
-    ...(reference !== undefined ? { reference } : {}),
+    reference,
     links,
   };
 }
@@ -949,7 +1023,12 @@ function openOrRefuse(bytes: Uint8Array): ReturnType<typeof openOurGlyphs> {
     // `xref-syntax`, `startxref-missing` and `stream-decode` were indistinguishable, and a tool had no idea where to look. The reason is
     // OUR OWN word, from a closed vocabulary (`pdf-objects/refusal.ts`), so it may travel: it rides on `cause`, which never reaches the
     // message. The displayed text does not change — it stays the one we compose, and its test pins it.
-    throw new ReaderError("EXTRACT_FAILED", "the file is damaged or is not a valid PDF", undefined, error instanceof PdfObjectsRefusal ? { cause: error } : undefined);
+    throw new ReaderError(
+      "EXTRACT_FAILED",
+      "the file is damaged or is not a valid PDF",
+      undefined,
+      error instanceof PdfObjectsRefusal ? { cause: error } : undefined,
+    );
   }
 }
 
@@ -982,7 +1061,8 @@ export async function readPdfSource(bytes: Uint8Array, options: ReadPdfSourceOpt
   };
 
   const texts: PageText[] = [];
-  for (let pageIndex = 0; pageIndex < Math.min(pageCount, firstPages ?? pageCount); pageIndex++) texts.push(readPageText(ctx, pageIndex));
+  for (let pageIndex = 0; pageIndex < Math.min(pageCount, firstPages ?? pageCount); pageIndex++)
+    texts.push(readPageText(ctx, pageIndex));
 
   const allRuns = texts.map((t) => t.runs);
   const allHasText = allRuns.map((runs) => hasReadableText(linesFromItems(runs)));

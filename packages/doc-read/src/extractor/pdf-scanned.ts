@@ -90,16 +90,25 @@ const buildBatchPdf = async (source: PDFDocument, pageIndices: number[]): Promis
 
 /** Builds the batch PDF for `pages` and, when it exceeds `OCR_BATCH_MAX_BYTES` with more than one page,
  *  splits the pages in two halves recursively. Page order is kept: the batches come out in reading order. */
-const boundedBatches = async (source: PDFDocument, pages: number[]): Promise<{ pages: number[]; bytes: Uint8Array }[]> => {
+const boundedBatches = async (
+  source: PDFDocument,
+  pages: number[],
+): Promise<{ pages: number[]; bytes: Uint8Array }[]> => {
   const batchBytes = await buildBatchPdf(source, pages);
   if (batchBytes.length <= OCR_BATCH_MAX_BYTES || pages.length === 1) return [{ pages, bytes: batchBytes }];
   const half = Math.ceil(pages.length / 2);
-  return [...(await boundedBatches(source, pages.slice(0, half))), ...(await boundedBatches(source, pages.slice(half)))];
+  return [
+    ...(await boundedBatches(source, pages.slice(0, half))),
+    ...(await boundedBatches(source, pages.slice(half))),
+  ];
 };
 
 /** Every batch of `pageIndices`, built before any vision call. The parsed source lives only in here, so it can be collected
  *  while the vision calls run; no page, no parse. */
-const planBatches = async (bytes: Uint8Array, pageIndices: number[]): Promise<{ pages: number[]; bytes: Uint8Array }[]> => {
+const planBatches = async (
+  bytes: Uint8Array,
+  pageIndices: number[],
+): Promise<{ pages: number[]; bytes: Uint8Array }[]> => {
   if (pageIndices.length === 0) return [];
   // An owner-password-only PDF (empty user password) opens in our reader; an empty password lets pdf-lib decrypt it, so the batch is
   // readable. `ignoreEncryption` would copy the pages still encrypted into an unencrypted batch (noise sent to the AI).
@@ -152,7 +161,8 @@ export const ocrScannedPages = async (
       // free (every comparison against NaN is false, so the bounded check
       // itself evaluates false, and the surrounding `!` flips that to a
       // reject).
-      const confidenceInRange = pageResult !== undefined && pageResult.confidence >= LOW_CONFIDENCE_THRESHOLD && pageResult.confidence <= 1;
+      const confidenceInRange =
+        pageResult !== undefined && pageResult.confidence >= LOW_CONFIDENCE_THRESHOLD && pageResult.confidence <= 1;
       if (!pageResult || !confidenceInRange || pageResult.text.trim().length === 0) {
         throw new ReaderError(
           "OCR_LOW_CONFIDENCE",
@@ -170,8 +180,53 @@ export const ocrScannedPages = async (
  *  as a scan, even when the other pages are scans (no pictures of scans beside empty tabs). With the AI on, every page sent
  *  comes back with text or the reading fails as a whole (`ocrScannedPages`), so nothing is left to refuse after it. */
 function refuseUnreadFile(aiOff: boolean, nothingHasText: boolean, unreadPageCount: number): void {
-  if (aiOff && nothingHasText && unreadPageCount > 0) throw new ReaderError("EXTRACT_FAILED", "no page of the PDF could be read");
+  if (aiOff && nothingHasText && unreadPageCount > 0)
+    throw new ReaderError("EXTRACT_FAILED", "no page of the PDF could be read");
 }
+
+type PdfExtraction = Awaited<ReturnType<typeof extractPdf>>;
+
+/** The error a failed AI reading becomes: its own code kept, the file's counts carried; another error is `cause`. */
+const aiReadingFailure = (error: unknown, counts: { pageCount: number; scannedPageCount: number }): ReaderError =>
+  error instanceof ReaderError
+    ? new ReaderError(error.code, error.message, counts)
+    : new ReaderError("UNKNOWN", "the AI reading failed", counts, { cause: error });
+
+/** For the text-conservation check on the publish path: the digital text as read, and the pages whose runs are not
+ *  text we can check (`toRead`: a scan's layer is not published). */
+const conservationSourceOf = (
+  textSource: PdfExtraction["textSource"],
+  toRead: readonly number[],
+): PdfConservationSource => ({
+  runs: textSource.runs,
+  deliberateRemovals: textSource.deliberateRemovals,
+  excludedPages: new Set(toRead),
+  // The tabs are checked tab by tab (`pipeline/tab-conservation.ts`).
+  deliberateRemovalsByPage: textSource.deliberateRemovalsByPage,
+  // The second reading of the letters control, beside the word verdict (`pipeline/letter-conservation.ts`).
+  letters: textSource.reference,
+});
+
+/** The loss notices and the pictures kept once the AI's text replaced the pages of `replaced`. */
+const keptAfterAiReading = (
+  replaced: ReadonlySet<number>,
+  images: PdfExtraction["images"],
+  pagesOfImage: PdfExtraction["pagesOfImage"],
+  imageLossByPage: PdfExtraction["imageLossByPage"],
+  textUnreadByPage: PdfExtraction["textUnreadByPage"],
+): { keptNotices: DocumentNotice[] | undefined; keptImages: PdfExtraction["images"] } => {
+  // A page whose text could not be read and that the AI read is no loss either (16/11/2026).
+  const keptLosses = [
+    ...(pdfImageUnreadNotices(imageLossByPage, replaced) ?? []),
+    ...(pdfTextUnreadNotices(textUnreadByPage, replaced) ?? []),
+  ];
+  const keptNotices = keptLosses.length > 0 ? keptLosses : undefined;
+  const keptImages = images?.filter((image) => {
+    const placedOn = pagesOfImage?.get(image.sha256);
+    return placedOn === undefined || [...placedOn].some((pageIndex) => !replaced.has(pageIndex));
+  });
+  return { keptNotices, keptImages };
+};
 
 /** Full PDF path, digital + scanned/mixed (MIKSUDOC « Spécification technique » §5.4): extracts the
  *  digital text layer, OCRs whichever pages have none, and merges both in
@@ -205,11 +260,19 @@ export const extractPdfWithVision = async (
   docFacts: PdfDocumentFacts;
   conservationSource: PdfConservationSource;
 }> => {
-  const { pages, images, pagesOfImage, scannedPageIndices, ocrLayerPageIndices, tableDetections, textSource, docFacts, notices, imageLossByPage, textUnreadByPage } = await extractPdf(
-    bytes,
-    opts?.pageLanguage,
-    opts?.limits === undefined ? undefined : { limits: opts.limits },
-  );
+  const {
+    pages,
+    images,
+    pagesOfImage,
+    scannedPageIndices,
+    ocrLayerPageIndices,
+    tableDetections,
+    textSource,
+    docFacts,
+    notices,
+    imageLossByPage,
+    textUnreadByPage,
+  } = await extractPdf(bytes, opts?.pageLanguage, opts?.limits === undefined ? undefined : { limits: opts.limits });
   const language = opts?.pageLanguage ?? "en";
   const pageCount = pages.length;
   // 🔴 A SCAN (05/10/2026): a PDF whose EVERY page has no text (one page included: a diagram exported as a picture
@@ -230,21 +293,17 @@ export const extractPdfWithVision = async (
   const toRead = isScan || readAll ? pages.map((_, pageIndex) => pageIndex) : scannedPageIndices;
   // For the text-conservation check on the publish path: the digital text as
   // read, and the pages whose runs are not text we can check (a scan's layer is not published).
-  const conservationSource: PdfConservationSource = {
-    runs: textSource.runs,
-    deliberateRemovals: textSource.deliberateRemovals,
-    excludedPages: new Set(toRead),
-    // The tabs are checked tab by tab (`pipeline/tab-conservation.ts`).
-    deliberateRemovalsByPage: textSource.deliberateRemovalsByPage,
-    // The second reading of the letters control, beside the word verdict (`pipeline/letter-conservation.ts`).
-    letters: textSource.reference,
-  };
+  const conservationSource = conservationSourceOf(textSource, toRead);
   // What the row says: the pages with no text at all, unread pages left out (the upload's rule « too many scans » reads it,
   // `core/document-caps.ts#refusesScannedUpload`) — not the pages the AI was asked to read. A PDF with an invisible OCR layer
   // counts every page, as the AI reads them all (05/10/2026), its unread pages excepted (17/11/2026).
   const scannedPages = (hasOcrLayer ? pageCount : scannedPageIndices.length) - unreadPages.length;
   // The one shape of the answer; the three exits differ only by the blocks, the pictures and notices kept, and the scan count.
-  const result = (blocks: IRDoc, kept: { images: typeof images; notices: typeof notices }, extra: { scannedPages?: number } = {}) => ({
+  const result = (
+    blocks: IRDoc,
+    kept: { images: typeof images; notices: typeof notices },
+    extra: { scannedPages?: number } = {},
+  ) => ({
     doc: blocks,
     ...(kept.images ? { images: kept.images } : {}),
     ...(tableDetections ? { tableDetections } : {}),
@@ -263,7 +322,10 @@ export const extractPdfWithVision = async (
   // which is refused until the AI reads it (03/10 then 05/10/2026). One page limit serves every PDF
   // (`DOCUMENT_PAGE_LIMIT`, in `extractPdf`): a scan has none of its own.
   if (opts?.ocr === false && isScan && opts.scanAsImages !== true) {
-    throw new ReaderError("SCANNED_PDF_NEEDS_AI_OCR", `${scannedPages} scanned pages, AI OCR is off`, { pageCount, scannedPageCount: scannedPages });
+    throw new ReaderError("SCANNED_PDF_NEEDS_AI_OCR", `${scannedPages} scanned pages, AI OCR is off`, {
+      pageCount,
+      scannedPageCount: scannedPages,
+    });
   }
   // The pages without text are published as they are, their pictures included (`pdf-page-stages.ts`, 07/10/2026).
   if (opts?.ocr === false) {
@@ -274,21 +336,21 @@ export const extractPdfWithVision = async (
   // service itself threw is not ours: our sentence replaces its text, and the error rides as `cause` for the caller to classify
   // (the app keeps the code of its own `AppError`, `core/reader-bridge.ts`); this library reads nothing of it.
   const ocrByPage = await ocrScannedPages(bytes, toRead, vision, opts).catch((error: unknown) => {
-    const counts = { pageCount, scannedPageCount: scannedPages };
-    throw error instanceof ReaderError
-      ? new ReaderError(error.code, error.message, counts)
-      : new ReaderError("UNKNOWN", "the AI reading failed", counts, { cause: error });
+    throw aiReadingFailure(error, { pageCount, scannedPageCount: scannedPages });
   });
   const merged = pages.map((digitalBlocks, pageIndex) => ocrByPage.get(pageIndex) ?? digitalBlocks);
   // The images of a page the AI's text replaced were never to be published: not counted as lost, and not published
   // (they were read with the page, `pdf-open.ts`; one also placed on a kept page stays).
-  const replaced = new Set(ocrByPage.keys());
-  // A page whose text could not be read and that the AI read is no loss either (16/11/2026).
-  const keptLosses = [...(pdfImageUnreadNotices(imageLossByPage, replaced) ?? []), ...(pdfTextUnreadNotices(textUnreadByPage, replaced) ?? [])];
-  const keptNotices = keptLosses.length > 0 ? keptLosses : undefined;
-  const keptImages = images?.filter((image) => {
-    const placedOn = pagesOfImage?.get(image.sha256);
-    return placedOn === undefined || [...placedOn].some((pageIndex) => !replaced.has(pageIndex));
-  });
-  return result(pdfPageTabs(merged, language, opts?.labels), { images: keptImages && keptImages.length > 0 ? keptImages : undefined, notices: keptNotices }, scanned);
+  const { keptNotices, keptImages } = keptAfterAiReading(
+    new Set(ocrByPage.keys()),
+    images,
+    pagesOfImage,
+    imageLossByPage,
+    textUnreadByPage,
+  );
+  return result(
+    pdfPageTabs(merged, language, opts?.labels),
+    { images: keptImages && keptImages.length > 0 ? keptImages : undefined, notices: keptNotices },
+    scanned,
+  );
 };

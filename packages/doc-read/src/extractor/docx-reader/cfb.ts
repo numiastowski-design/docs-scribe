@@ -41,7 +41,8 @@ interface CfbFile {
 /** The file, when its size, signature and sector shift are those of a CFB. */
 function openCfb(bytes: Uint8Array): CfbFile | undefined {
   if (bytes.length < 512) return undefined;
-  for (let byteIndex = 0; byteIndex < SIGNATURE.length; byteIndex++) if (bytes[byteIndex] !== SIGNATURE[byteIndex]) return undefined;
+  for (let byteIndex = 0; byteIndex < SIGNATURE.length; byteIndex++)
+    if (bytes[byteIndex] !== SIGNATURE[byteIndex]) return undefined;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const sectorShift = view.getUint16(30, true);
   if (sectorShift !== 9 && sectorShift !== 12) return undefined; // v3 (512-byte sectors) or v4 (4096-byte sectors)
@@ -87,7 +88,13 @@ function readFatSectors(file: CfbFile): number[] | undefined {
 
 /** Appends to `fatSectors` the FAT sector numbers one DIFAT sector lists; `false` once they would outnumber the file's
  *  `maxSectors`. */
-function readDifatSector(file: CfbFile, difatOffset: number, fatSectorsPerDifatSector: number, fatSectors: number[], maxSectors: number): boolean {
+function readDifatSector(
+  file: CfbFile,
+  difatOffset: number,
+  fatSectorsPerDifatSector: number,
+  fatSectors: number[],
+  maxSectors: number,
+): boolean {
   for (let entryIndex = 0; entryIndex < fatSectorsPerDifatSector; entryIndex++) {
     const fatSector = file.view.getUint32(difatOffset + entryIndex * 4, true);
     if (fatSector <= MAXREGSECT) {
@@ -103,7 +110,9 @@ function fatEntry(file: CfbFile, fatSectors: readonly number[], sector: number):
   const fatSector = fatSectors[Math.floor(sector / entriesPerFatSector)];
   if (fatSector === undefined) return undefined;
   const fatOffset = sectorOffset(file, fatSector);
-  return fatOffset === undefined ? undefined : file.view.getUint32(fatOffset + (sector % entriesPerFatSector) * 4, true);
+  return fatOffset === undefined
+    ? undefined
+    : file.view.getUint32(fatOffset + (sector % entriesPerFatSector) * 4, true);
 }
 
 /** The name of the 128-byte directory entry at `entryOffset`, or undefined when it is neither a stream nor the root, or its name length is out of bounds. */
@@ -113,7 +122,8 @@ function entryName(view: DataView, entryOffset: number): string | undefined {
   const nameLength = view.getUint16(entryOffset + 64, true);
   if (nameLength < 2 || nameLength > 64 || nameLength % 2 !== 0) return undefined;
   let name = "";
-  for (let charIndex = 0; charIndex < nameLength / 2 - 1; charIndex++) name += String.fromCharCode(view.getUint16(entryOffset + charIndex * 2, true));
+  for (let charIndex = 0; charIndex < nameLength / 2 - 1; charIndex++)
+    name += String.fromCharCode(view.getUint16(entryOffset + charIndex * 2, true));
   return name;
 }
 
@@ -135,7 +145,11 @@ function directoryNames(bytes: Uint8Array): string[] | undefined {
     seenDirectorySectors.add(sector);
     const directoryOffset = sectorOffset(file, sector);
     if (directoryOffset === undefined) return undefined;
-    for (let entryOffset = directoryOffset; entryOffset + 128 <= directoryOffset + file.sectorSize; entryOffset += 128) {
+    for (
+      let entryOffset = directoryOffset;
+      entryOffset + 128 <= directoryOffset + file.sectorSize;
+      entryOffset += 128
+    ) {
       const name = entryName(file.view, entryOffset);
       if (name !== undefined) names.push(name);
     }

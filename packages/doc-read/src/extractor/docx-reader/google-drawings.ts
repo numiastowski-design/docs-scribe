@@ -38,7 +38,8 @@ const SIZE_TOLERANCE_PX = 0.5;
  *  ceilings are for Office files a user uploads. */
 const HTML_EXPORT_LIMITS: PackageLimits = { partMaxBytes: 16_000_000, packageMaxBytes: 32_000_000 };
 
-const unreadable = (): ReaderError => new ReaderError("EXTRACT_FAILED", "the Google Docs HTML export could not be opened");
+const unreadable = (): ReaderError =>
+  new ReaderError("EXTRACT_FAILED", "the Google Docs HTML export could not be opened");
 
 /** One `<img>` of the HTML export that has a file and a declared size. */
 export interface HtmlExportImage {
@@ -59,7 +60,25 @@ export interface HtmlExport {
 type Node = DefaultTreeAdapterMap["node"];
 type Element = DefaultTreeAdapterMap["element"];
 
-const BLOCK_TAGS = new Set(["p", "div", "li", "ul", "ol", "table", "tr", "td", "th", "blockquote", "pre", "h1", "h2", "h3", "h4", "h5", "h6"]);
+const BLOCK_TAGS = new Set([
+  "p",
+  "div",
+  "li",
+  "ul",
+  "ol",
+  "table",
+  "tr",
+  "td",
+  "th",
+  "blockquote",
+  "pre",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+]);
 const UNREAD_TAGS = new Set(["head", "style", "script"]);
 
 /** `style="… width: 560.00px; height: 94.00px …"` — the image's own declared
@@ -69,16 +88,22 @@ const declared = (style: string, property: "width" | "height"): number | undefin
   return match?.[1] === undefined ? undefined : Number(match[1]);
 };
 
-const htmlAttributeOf = (element: Element, name: string): string | undefined => element.attrs.find((attribute) => attribute.name === name)?.value;
+const htmlAttributeOf = (element: Element, name: string): string | undefined =>
+  element.attrs.find((attribute) => attribute.name === name)?.value;
 
 /** What an `<img>` of the export declares, when it has a file in the archive and a declared size. */
-const exportImageOf = (element: Element, archivedNames: ReadonlySet<string>, previousText: string): HtmlExportImage | undefined => {
+const exportImageOf = (
+  element: Element,
+  archivedNames: ReadonlySet<string>,
+  previousText: string,
+): HtmlExportImage | undefined => {
   const src = htmlAttributeOf(element, "src");
   const style = htmlAttributeOf(element, "style") ?? "";
   const widthPx = declared(style, "width");
   const heightPx = declared(style, "height");
   const path = src === undefined ? undefined : posix.normalize(src);
-  if (path === undefined || !archivedNames.has(path) || widthPx === undefined || heightPx === undefined) return undefined;
+  if (path === undefined || !archivedNames.has(path) || widthPx === undefined || heightPx === undefined)
+    return undefined;
   return { path, widthPx, heightPx, previousText };
 };
 
@@ -98,7 +123,7 @@ const htmlImagesOf = (html: string, archivedNames: ReadonlySet<string>): HtmlExp
       return;
     }
     if (!("childNodes" in node)) return;
-    const element = "tagName" in node ? (node as Element) : undefined;
+    const element = "tagName" in node ? node : undefined;
     const tag = element?.tagName;
     if (tag !== undefined && UNREAD_TAGS.has(tag)) return;
     if (element !== undefined && tag === "img") {
@@ -127,7 +152,11 @@ export const readHtmlExport = async (zipBytes: Uint8Array): Promise<HtmlExport |
     if (htmlBytes === undefined) return undefined;
     const archivedNames = new Set(archive.names);
     const images = htmlImagesOf(new TextDecoder("utf-8").decode(htmlBytes), archivedNames);
-    return { images, bytesOf: (path) => (archivedNames.has(path) ? archive.readBytes(path).catch(() => undefined) : Promise.resolve(undefined)) };
+    return {
+      images,
+      bytesOf: (path) =>
+        archivedNames.has(path) ? archive.readBytes(path).catch(() => undefined) : Promise.resolve(undefined),
+    };
   } catch {
     // Bias (review of disguised failures, point 9, 06/10/2026): an unreadable export means our own SVG of the drawing is published instead of Google's
     // picture. The drawing stays on the page; only its look differs. No remark: nothing the admin can act on.
@@ -143,7 +172,8 @@ export interface DrawingProbe {
 }
 
 const sameSize = (probe: DrawingProbe, image: HtmlExportImage): boolean =>
-  Math.abs(probe.widthPx - image.widthPx) <= SIZE_TOLERANCE_PX && Math.abs(probe.heightPx - image.heightPx) <= SIZE_TOLERANCE_PX;
+  Math.abs(probe.widthPx - image.widthPx) <= SIZE_TOLERANCE_PX &&
+  Math.abs(probe.heightPx - image.heightPx) <= SIZE_TOLERANCE_PX;
 
 /**
  * For each drawing, THE image of the export it is, or `undefined`. A drawing
@@ -153,12 +183,19 @@ const sameSize = (probe: DrawingProbe, image: HtmlExportImage): boolean =>
  * candidate images) are told apart by nothing that either file declares, so
  * none is matched — the two readings disagree or say too little, we abstain.
  */
-export const matchDrawings = (probes: readonly DrawingProbe[], images: readonly HtmlExportImage[]): (HtmlExportImage | undefined)[] => {
-  const candidates = probes.map((probe) => images.filter((image) => sameSize(probe, image) && image.previousText === probe.previousText));
+export const matchDrawings = (
+  probes: readonly DrawingProbe[],
+  images: readonly HtmlExportImage[],
+): (HtmlExportImage | undefined)[] => {
+  const candidates = probes.map((probe) =>
+    images.filter((image) => sameSize(probe, image) && image.previousText === probe.previousText),
+  );
   return candidates.map((ownCandidates, probeIndex) => {
     const only = ownCandidates.length === 1 ? ownCandidates[0] : undefined;
     if (only === undefined) return undefined;
-    return candidates.some((otherCandidates, otherIndex) => otherIndex !== probeIndex && otherCandidates.includes(only)) ? undefined : only;
+    return candidates.some((otherCandidates, otherIndex) => otherIndex !== probeIndex && otherCandidates.includes(only))
+      ? undefined
+      : only;
   });
 };
 
@@ -221,10 +258,17 @@ export interface GooglePicture {
 const identityOf = (bytes: Uint8Array): string => sha256Hex(bytes);
 
 /** What a slot's drawing declares, in the export's CSS pixels. */
-const probeOf = (slot: DrawingSlot): DrawingProbe => ({ widthPx: slot.canvas.cx / EMU_PER_PX, heightPx: slot.canvas.cy / EMU_PER_PX, previousText: slot.previousText });
+const probeOf = (slot: DrawingSlot): DrawingProbe => ({
+  widthPx: slot.canvas.cx / EMU_PER_PX,
+  heightPx: slot.canvas.cy / EMU_PER_PX,
+  previousText: slot.previousText,
+});
 
 /** Google's picture for a matched image: its bytes, when they are a PNG with a readable width. */
-const googlePictureOf = async (htmlExport: HtmlExport, match: HtmlExportImage | undefined): Promise<GooglePicture | undefined> => {
+const googlePictureOf = async (
+  htmlExport: HtmlExport,
+  match: HtmlExportImage | undefined,
+): Promise<GooglePicture | undefined> => {
   if (match === undefined) return undefined;
   const bytes = await htmlExport.bytesOf(match.path);
   const pixelWidth = bytes === undefined || !isPng(bytes) ? undefined : imagePixelWidth(bytes);
@@ -236,7 +280,10 @@ const googlePictureOf = async (htmlExport: HtmlExport, match: HtmlExportImage | 
  *  drawing, else `undefined`. No slot, no call. Anything that goes wrong on
  *  the way (the export, the archive, an image that is not a PNG with a
  *  readable width) is an abstention for the slots it touches. */
-export const googlePictures = async (slots: readonly DrawingSlot[], source: GoogleDrawingSource): Promise<(GooglePicture | undefined)[]> => {
+export const googlePictures = async (
+  slots: readonly DrawingSlot[],
+  source: GoogleDrawingSource,
+): Promise<(GooglePicture | undefined)[]> => {
   const noPictures = slots.map(() => undefined);
   if (slots.length === 0) return noPictures;
   try {

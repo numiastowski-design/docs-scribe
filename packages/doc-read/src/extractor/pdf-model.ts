@@ -15,7 +15,13 @@ import type { PdfDocumentFacts } from "./pdf-facts";
 import type { PdfReferenceCycle, PdfTextRun } from "./pdf-source";
 
 /** The geometry-only view of a text run: what the layout rules (grids, gutters) read. */
-export const toFragment = (r: PdfTextRun): Fragment => ({ text: r.text, x: r.x, y: r.y, width: r.width, height: r.height });
+export const toFragment = (r: PdfTextRun): Fragment => ({
+  text: r.text,
+  x: r.x,
+  y: r.y,
+  width: r.width,
+  height: r.height,
+});
 
 /** Un item positionné : ce que tout le chemin PDF mesure, et le minimum qu'une
  *  ligne demande. */

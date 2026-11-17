@@ -6,7 +6,7 @@ word was lost on the way.
 The declared-formats reader of [Miksumia Publisher](https://miksumia.com), the Atlassian Marketplace
 [app](https://marketplace.atlassian.com/apps/2647582831/miksumia-publisher-for-confluence) that turns
 uploaded files into Confluence pages. PDF is the other half, published as
-[skryba](https://www.npmjs.com/package/skryba).
+[pdf-skryba](https://www.npmjs.com/package/pdf-skryba).
 
 Published on npm as [`docs-scribe`](https://www.npmjs.com/package/docs-scribe): `npm i docs-scribe`.
 
@@ -132,6 +132,6 @@ sees and the reader loses. That is what the conservation check above exists to m
 AGPL-3.0-or-later: run a modified version as a network service and its source must be available to its
 users. Since 0.4.1 the code comes readable (`dist/index.js`), with the same code minified beside it
 (`docs-scribe/min`). This repository is that source — a snapshot of the packages the npm bundle is built from, taken
-from the development monorepo at version 0.4.1 (17 November 2026). The entry points are
+from the development monorepo at version 0.4.2 (17 November 2026). The entry points are
 `packages/doc-read/src/lib/docs.ts` and `packages/doc-read/src/lib/docs-light.ts`; the npm package ships
 the bundle built from them. Questions: <contact@miksumia.com>.

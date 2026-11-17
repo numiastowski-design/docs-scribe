@@ -22,9 +22,24 @@ import { renderSlideSvg } from "../slide-svg";
 import type { ReaderLimits } from "doc-ir/lib/reader-limits";
 import { chartToIr, type PptxChart, readChartOrWithheld } from "../pptx-reader/chart";
 import type { ColorContext } from "../pptx-reader/color";
-import { findInternalTarget, readUnlessDamaged, PartDamagedError, findRelationshipOfKind, type OpcPackage, type Relationship } from "../ooxml/package";
+import {
+  findInternalTarget,
+  readUnlessDamaged,
+  PartDamagedError,
+  findRelationshipOfKind,
+  type OpcPackage,
+  type Relationship,
+} from "../ooxml/package";
 import type { DrawingImageRegistrar } from "./shapes";
-import { attributeOf, findChild, findDrawingFrame, findGraphicData, childNodesOf, qualifiedNameOf, type XNode } from "../ooxml/xml";
+import {
+  attributeOf,
+  findChild,
+  findDrawingFrame,
+  findGraphicData,
+  childNodesOf,
+  qualifiedNameOf,
+  type XNode,
+} from "../ooxml/xml";
 
 /** `true` when the SmartArt data model itself cannot be read (damaged), as opposed to its drawing cache. */
 const modelUnreadable = async (pkg: OpcPackage, relationship: Relationship): Promise<boolean> => {
@@ -39,7 +54,9 @@ const modelUnreadable = async (pkg: OpcPackage, relationship: Relationship): Pro
 };
 
 /** What the `a:graphicData` of a drawing names, by the relationship id. */
-export type DrawingObject = { readonly kind: "chart"; readonly relId: string } | { readonly kind: "smartart"; readonly relId: string; readonly extent?: Size };
+export type DrawingObject =
+  | { readonly kind: "chart"; readonly relId: string }
+  | { readonly kind: "smartart"; readonly relId: string; readonly extent?: Size };
 
 /** The chart(s) and SmartArt(s) a `w:drawing` holds ITSELF: directly in its
  *  `a:graphicData`, or in a frame of a group (`wpg:graphicFrame`, Word 2010
@@ -94,7 +111,10 @@ const objectsUnder = (node: XNode, found: DrawingObject[] = [], extent?: Size): 
   for (const childNode of childNodesOf(node)) {
     const enclosingExtent = extentOf(childNode) ?? extent;
     const object = objectOf(childNode);
-    if (object) found.push(object.kind === "smartart" && enclosingExtent !== undefined ? { ...object, extent: enclosingExtent } : object);
+    if (object)
+      found.push(
+        object.kind === "smartart" && enclosingExtent !== undefined ? { ...object, extent: enclosingExtent } : object,
+      );
     else objectsUnder(childNode, found, enclosingExtent);
   }
   return found;
@@ -202,7 +222,8 @@ const preloadObject = async (
 
 /** Reads a chart part once, however many frames name it. */
 const preloadChart = async (state: PreloadState, target: string | undefined): Promise<void> => {
-  if (target !== undefined && !state.charts.has(target)) state.charts.set(target, await readChartOrWithheld(state.pkg, target, { picture: false, limits: state.limits }));
+  if (target !== undefined && !state.charts.has(target))
+    state.charts.set(target, await readChartOrWithheld(state.pkg, target, { picture: false, limits: state.limits }));
 };
 
 /** Keeps a SmartArt's words and its drawing, drawn on the frame's `extent`, once per data-model part. */
@@ -214,11 +235,19 @@ const keepSmartArt = async (
 ): Promise<void> => {
   if (!relationship || state.smartArts.has(relationship.target)) return;
   const drawing = await drawingOf(state.pkg, smartArt.claimed, extent, state.theme, state.limits);
-  state.smartArts.set(relationship.target, { words: smartArt.words, levels: smartArt.levels, ...(drawing === undefined ? {} : { drawing }) });
+  state.smartArts.set(relationship.target, {
+    words: smartArt.words,
+    levels: smartArt.levels,
+    ...(drawing === undefined ? {} : { drawing }),
+  });
 };
 
 /** Reads the objects of one story ahead of the walk; answers the words of its drawing caches whose model is missing. */
-const preloadStory = async (state: PreloadState, root: XNode, relationships: ReadonlyMap<string, Relationship>): Promise<string[][]> => {
+const preloadStory = async (
+  state: PreloadState,
+  root: XNode,
+  relationships: ReadonlyMap<string, Relationship>,
+): Promise<string[][]> => {
   const claimed = new Set<string>();
   let modelless = 0;
   for (const object of objectsUnder(root)) {
@@ -244,7 +273,10 @@ const smartArtBlocks = (entry: SmartArtEntry, register: DrawingImageRegistrar): 
   if (entry.words.length > 0) {
     // The words no drawn line shows are « not drawn »: kept for a reader of the IR, and no longer a loss — the list publishes them all.
     const undrawn = undrawnWords(entry.words, lines);
-    blocks.push({ kind: "diagramText", sections: [{ ...outline(entry.words, entry.levels), ...(undrawn.length > 0 ? { undrawn } : {}) }] });
+    blocks.push({
+      kind: "diagramText",
+      sections: [{ ...outline(entry.words, entry.levels), ...(undrawn.length > 0 ? { undrawn } : {}) }],
+    });
   }
   return blocks;
 };
@@ -282,7 +314,14 @@ export const preloadObjects = async (
     },
     gathered: () => {
       // A drawing cache holds no tree: its words make a flat list, published all the same.
-      const sections = withoutModel.filter((cacheWords) => cacheWords.length > 0).map((cacheWords): DiagramTextSection => outline(cacheWords, cacheWords.map(() => 0)));
+      const sections = withoutModel
+        .filter((cacheWords) => cacheWords.length > 0)
+        .map((cacheWords): DiagramTextSection =>
+          outline(
+            cacheWords,
+            cacheWords.map(() => 0),
+          ),
+        );
       return sections.length === 0 ? [] : [{ kind: "diagramText", sections }];
     },
   };

@@ -80,7 +80,10 @@ const asColumns = (table: Table): Columns | undefined => {
 
 /** The blocks with each qualifying top-level table replaced by its `columns`; every other block comes back as the same object. `neverConverted`: blocks
  *  never converted (the reader's text-box blocks, which join the body's flow). */
-export const layoutTablesToColumns = (blocks: readonly IRBlock[], neverConverted: ReadonlySet<IRBlock> = new Set()): IRBlock[] =>
+export const layoutTablesToColumns = (
+  blocks: readonly IRBlock[],
+  neverConverted: ReadonlySet<IRBlock> = new Set(),
+): IRBlock[] =>
   blocks.map((block) => (block.kind === "table" && !neverConverted.has(block) ? (asColumns(block) ?? block) : block));
 
 /** The blocks with each top-level `columns` whose cells no longer qualify (the cells are classed before `images.resolve`, which may drop a

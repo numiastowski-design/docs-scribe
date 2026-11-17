@@ -16,4 +16,8 @@ export type DocxExtractResult = DocxReadResult;
 
 // No catch-all here: the archive and XML layers already answer our message for a damaged file, so a TypeError from
 // OUR reader stays ours (UNKNOWN, retried, visibly our defect) instead of blaming the user's document.
-export const extractDocx = async (bytes: Uint8Array, limits?: ReaderLimits, labels?: PageLabelOverride): Promise<DocxExtractResult> => readDocx(bytes, undefined, undefined, limits, labels);
+export const extractDocx = async (
+  bytes: Uint8Array,
+  limits?: ReaderLimits,
+  labels?: PageLabelOverride,
+): Promise<DocxExtractResult> => readDocx(bytes, undefined, undefined, limits, labels);

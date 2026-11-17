@@ -24,5 +24,9 @@ const unreadable = (): ReaderError => new ReaderError("EXTRACT_FAILED", UNREADAB
 //
 // `drawingSource`: where Google's own image of a drawing comes from (D2 voie A,
 // MIKSUDOC « Spécification fonctionnelle » §9.5), asked only when a drawing is drawn.
-export const extractGoogleDoc = async (docxBytes: Uint8Array, drawingSource?: GoogleDrawingSource, limits?: ReaderLimits, labels?: PageLabelOverride): Promise<GoogleDocExtractResult> =>
-  readDocx(docxBytes, unreadable, drawingSource, limits, labels);
+export const extractGoogleDoc = async (
+  docxBytes: Uint8Array,
+  drawingSource?: GoogleDrawingSource,
+  limits?: ReaderLimits,
+  labels?: PageLabelOverride,
+): Promise<GoogleDocExtractResult> => readDocx(docxBytes, unreadable, drawingSource, limits, labels);

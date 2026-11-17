@@ -121,7 +121,11 @@ export const keptCellsResolver = (sheetName: string, cells: readonly KeptChartCe
   const lineOf = (span: Span): { line: readonly Placed[]; from: number; to: number } => {
     const { byCol, byRow } = index();
     const across = span.firstRow === span.lastRow;
-    return { line: (across ? byRow.get(span.firstRow) : byCol.get(span.firstCol)) ?? [], from: across ? span.firstCol : span.firstRow, to: across ? span.lastCol : span.lastRow };
+    return {
+      line: (across ? byRow.get(span.firstRow) : byCol.get(span.firstCol)) ?? [],
+      from: across ? span.firstCol : span.firstRow,
+      to: across ? span.lastCol : span.lastRow,
+    };
   };
   /** The first position of `line` whose place is at least `target`. */
   const firstAtLeast = (line: readonly Placed[], target: number): number => {

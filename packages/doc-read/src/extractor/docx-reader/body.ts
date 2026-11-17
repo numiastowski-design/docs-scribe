@@ -19,7 +19,18 @@ import { tableExceedsCaps } from "doc-ir/lib/table-width-cap";
 import { nestLists } from "../../lib/nest-lists";
 import type { PageLabels } from "doc-ir/lib/page-labels";
 import { MAX_ILVL, type Numbering } from "./numbering";
-import { type AnchorKey, chosenContent, equationText, type ImageLookup, isHiddenDrawing, isOffPage, type PageSize, readDrawing, unreadChoiceFallback, vmlTextBoxes } from "./objects";
+import {
+  type AnchorKey,
+  chosenContent,
+  equationText,
+  type ImageLookup,
+  isHiddenDrawing,
+  isOffPage,
+  type PageSize,
+  readDrawing,
+  unreadChoiceFallback,
+  vmlTextBoxes,
+} from "./objects";
 import { framedSkippedText } from "../skipped-elements";
 import { type DrawingObjects, drawingObjectsOf } from "./drawing-objects";
 import { collapseBlanks } from "doc-ir/lib/blanks";
@@ -27,11 +38,25 @@ import { isSymbolFont, symbolFontText } from "doc-ir/lib/symbol-font";
 import { type DrawingLedger } from "./google-drawings";
 import type { Relationship } from "../ooxml/package";
 import { type DrawingDiagram, type DrawingImageRegistrar, drawnShapeBlocks, readDrawingDiagram } from "./shapes";
-import { type DiagramConnector, type DiagramElement, OOXML_DIAGRAM_TOLERANCES, orderDiagram } from "doc-ir/layout/diagram-graph";
+import {
+  type DiagramConnector,
+  type DiagramElement,
+  OOXML_DIAGRAM_TOLERANCES,
+  orderDiagram,
+} from "doc-ir/layout/diagram-graph";
 import type { Box } from "doc-ir/layout/slide-elements";
 import { onOff, type Styles } from "./styles";
 import { intAttr } from "../../lib/ooxml-num";
-import { attributeOf, findChild, findChildren, childNodesOf, qualifiedNameOf, textContentOf, valOfChild, type XNode } from "../ooxml/xml";
+import {
+  attributeOf,
+  findChild,
+  findChildren,
+  childNodesOf,
+  qualifiedNameOf,
+  textContentOf,
+  valOfChild,
+  type XNode,
+} from "../ooxml/xml";
 import { spanSingleFirstRows } from "../span-single-first";
 
 /** One complex field being read: its instruction text (w:instrText) until
@@ -51,7 +76,8 @@ const fieldLinkTarget = (instructions: string): string | undefined => {
   const headMatch = /^\s*HYPERLINK\b/i.exec(instructions);
   if (!headMatch) return undefined;
   const tokens = [...instructions.slice(headMatch[0].length).matchAll(/"((?:[^"\\]|\\.)*)"|(\\[a-z])|(\S+)/gi)];
-  const valueOf = (token: RegExpMatchArray | undefined): string | undefined => (token?.[1] ?? token?.[3])?.replace(/\\(.)/g, "$1");
+  const valueOf = (token: RegExpMatchArray | undefined): string | undefined =>
+    (token?.[1] ?? token?.[3])?.replace(/\\(.)/g, "$1");
   let url: string | undefined;
   let fragment: string | undefined;
   for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
@@ -80,7 +106,11 @@ const openFieldHref = (ctx: ReadContext): string | undefined => {
 const withHref = (pieces: readonly Piece[], href: string | undefined): Piece[] =>
   href === undefined
     ? [...pieces]
-    : pieces.map((piece) => (piece.kind === "inline" && piece.inline.href === undefined ? { kind: "inline", inline: { ...piece.inline, href } } : piece));
+    : pieces.map((piece) =>
+        piece.kind === "inline" && piece.inline.href === undefined
+          ? { kind: "inline", inline: { ...piece.inline, href } }
+          : piece,
+      );
 
 /** The TOC field (its instruction's first word is TOC): the document's table
  *  of contents, published as ONE `toc` block like the w:sdt that usually
@@ -132,9 +162,16 @@ const separateField = (fields: readonly OpenField[], top: OpenField): TocMark =>
 const endField = (fields: OpenField[], onEmptyField: (() => void) | undefined): TocMark => {
   const closed = fields.pop();
   // A field closed with no « separate » has no computed result (a TOC is not one: it stands as its block).
-  if (closed?.state === "instructions" && !isTocField(closed.instructions) && !COLD_FIELD.test(closed.instructions) && !hidden(fields)) onEmptyField?.();
+  if (
+    closed?.state === "instructions" &&
+    !isTocField(closed.instructions) &&
+    !COLD_FIELD.test(closed.instructions) &&
+    !hidden(fields)
+  )
+    onEmptyField?.();
   // A TOC never updated has no result at all: still a table of contents.
-  if (closed?.state === "instructions" && isTocField(closed.instructions)) return hidden(fields) ? "toc-hidden" : "toc-block";
+  if (closed?.state === "instructions" && isTocField(closed.instructions))
+    return hidden(fields) ? "toc-hidden" : "toc-block";
   return undefined;
 };
 
@@ -317,11 +354,19 @@ const drawingPieces = (drawing: XNode, ctx: ReadContext): Piece[] => {
     else placed.push(item.block);
   }
   placed.push(...drawingObjectBlocks(drawing, ctx));
-  return [...inLine.map((block): Piece => ({ kind: "block", block })), ...afterPieces(after, content.anchor, diagram, units)];
+  return [
+    ...inLine.map((block): Piece => ({ kind: "block", block })),
+    ...afterPieces(after, content.anchor, diagram, units),
+  ];
 };
 
 /** The piece of the blocks a drawing puts after its paragraph, with what its connectors know of its text boxes. */
-const afterPieces = (after: IRBlock[], anchor: AnchorKey | undefined, diagram: DrawingDiagram | undefined, units: PieceDiagram["units"]): Piece[] => {
+const afterPieces = (
+  after: IRBlock[],
+  anchor: AnchorKey | undefined,
+  diagram: DrawingDiagram | undefined,
+  units: PieceDiagram["units"],
+): Piece[] => {
   // A drawing of lines only (a connector, nothing published) still tells
   // where its ends are: its piece goes on with no block.
   const hasLines = diagram !== undefined && diagram.connectors.length > 0;
@@ -331,7 +376,9 @@ const afterPieces = (after: IRBlock[], anchor: AnchorKey | undefined, diagram: D
         kind: "after",
         blocks: after,
         anchor,
-        ...(diagram === undefined || (units.length === 0 && !hasLines) ? {} : { diagram: { units, connectors: diagram.connectors, obstacles: diagram.obstacles } }),
+        ...(diagram === undefined || (units.length === 0 && !hasLines)
+          ? {}
+          : { diagram: { units, connectors: diagram.connectors, obstacles: diagram.obstacles } }),
       },
     ];
   }
@@ -350,7 +397,9 @@ const shapePictureBlocks = (drawing: XNode, ctx: ReadContext): IRBlock[] => {
   // been asked (voie A); a text box below is the DRAWING's words, never the
   // paragraph before the next drawing.
   return shapePicture.blocks.map((block): IRBlock =>
-    block.kind === "image" && shapePicture.canvas ? { ...block, ref: ctx.drawings.place(block.ref, shapePicture.canvas) } : block,
+    block.kind === "image" && shapePicture.canvas
+      ? { ...block, ref: ctx.drawings.place(block.ref, shapePicture.canvas) }
+      : block,
   );
 };
 
@@ -403,8 +452,12 @@ const runPieces = (run: XNode, ctx: ReadContext, scope: InlineScope): Piece[] =>
   // of the run is read but its field characters, which keep the open fields
   // in step (a table of contents block they give is kept).
   if (ctx.styles.hidden(scope.paragraphStyle, rPr)) {
-    const fieldOnly = childNodesOf(run).filter((childNode) => qualifiedNameOf(childNode) === "w:fldChar" || qualifiedNameOf(childNode) === "w:instrText");
-    return runContent(fieldOnly, { ...ctx, reportEmptyField: undefined }, withMarks, scope).filter((piece) => piece.kind === "block");
+    const fieldOnly = childNodesOf(run).filter(
+      (childNode) => qualifiedNameOf(childNode) === "w:fldChar" || qualifiedNameOf(childNode) === "w:instrText",
+    );
+    return runContent(fieldOnly, { ...ctx, reportEmptyField: undefined }, withMarks, scope).filter(
+      (piece) => piece.kind === "block",
+    );
   }
   return runContent(childNodesOf(run), ctx, withMarks, scope);
 };
@@ -417,7 +470,11 @@ const inInstructions = (ctx: ReadContext): boolean => hidden(ctx.fields);
 
 /** mc:AlternateContent read once: the Choice this reader understands, then, only when that read gives NOTHING, its
  *  image-only Fallback (`unreadChoiceFallback`). The three walks (runs, paragraph content, story units) share it. */
-const chooseAlternate = <T>(alternate: XNode, isPixel: ((relId: string) => boolean) | undefined, read: (branch: XNode) => T[]): T[] => {
+const chooseAlternate = <T>(
+  alternate: XNode,
+  isPixel: ((relId: string) => boolean) | undefined,
+  read: (branch: XNode) => T[],
+): T[] => {
   const chosen = chosenContent(alternate);
   if (!chosen) return [];
   const first = read(chosen);
@@ -432,10 +489,16 @@ const TOC_BLOCK: Piece = { kind: "block", block: { kind: "toc" } };
 // without a link (decided); the note itself is published at the end.
 // Kept with its brackets (29/09/2026), written through `noteCallLabel` like
 // every other page label.
-const noteCallPieces = (reference: XNode, tag: "w:footnoteReference" | "w:endnoteReference", ctx: ReadContext): Piece[] => {
+const noteCallPieces = (
+  reference: XNode,
+  tag: "w:footnoteReference" | "w:endnoteReference",
+  ctx: ReadContext,
+): Piece[] => {
   const id = attributeOf(reference, "w:id");
   const part: NotePart = tag === "w:footnoteReference" ? "footnotes" : "endnotes";
-  return id !== undefined ? [{ kind: "inline", inline: { text: ctx.labels.noteCallLabel(ctx.noteCall(part, id)), marks: ["sup"] } }] : [];
+  return id !== undefined
+    ? [{ kind: "inline", inline: { text: ctx.labels.noteCallLabel(ctx.noteCall(part, id)), marks: ["sup"] } }]
+    : [];
 };
 
 // w:ruby: a phonetic guide. Its base text (w:rubyBase) is the document's own
@@ -465,7 +528,8 @@ const rubyPieces = (ruby: XNode, ctx: ReadContext, scope: InlineScope, withMarks
 // that is visible, never silent.
 const symbolPieces = (sym: XNode, withMarks: (text: string) => Piece): Piece[] => {
   const charCode = Number.parseInt(attributeOf(sym, "w:char") ?? "", 16);
-  if (!(Number.isFinite(charCode) && charCode > 0 && charCode <= 0x10ffff && (charCode < 0xd800 || charCode > 0xdfff))) return [];
+  if (!(Number.isFinite(charCode) && charCode > 0 && charCode <= 0x10ffff && (charCode < 0xd800 || charCode > 0xdfff)))
+    return [];
   const character = String.fromCodePoint(charCode);
   return [withMarks(isSymbolFont(attributeOf(sym, "w:font")) ? symbolFontText(character) : character)];
 };
@@ -497,14 +561,21 @@ const runContent = (
     appendRunChild(pieces, childNode, tag, ctx, run);
     // The words of a HYPERLINK field's result carry its target.
     const href = openFieldHref(ctx);
-    if (href !== undefined && pieces.length > start) pieces.splice(start, pieces.length - start, ...withHref(pieces.slice(start), href));
+    if (href !== undefined && pieces.length > start)
+      pieces.splice(start, pieces.length - start, ...withHref(pieces.slice(start), href));
   }
   return pieces;
 };
 
 /** Appends to `pieces` what one child of a run gives once the open fields let it show: a note call, a drawing, a ruby, a
  *  VML text box, an alternate content's chosen branch, or text (`appendRunText`). */
-const appendRunChild = (pieces: Piece[], childNode: XNode, tag: string | undefined, ctx: ReadContext, run: RunInlines): void => {
+const appendRunChild = (
+  pieces: Piece[],
+  childNode: XNode,
+  tag: string | undefined,
+  ctx: ReadContext,
+  run: RunInlines,
+): void => {
   const { withMarks, scope } = run;
   switch (tag) {
     case "w:footnoteReference":
@@ -528,7 +599,11 @@ const appendRunChild = (pieces: Piece[], childNode: XNode, tag: string | undefin
       break;
     }
     case "mc:AlternateContent":
-      pieces.push(...chooseAlternate(childNode, ctx.isPixelImage, (branch) => runContent(childNodesOf(branch), ctx, withMarks, scope)));
+      pieces.push(
+        ...chooseAlternate(childNode, ctx.isPixelImage, (branch) =>
+          runContent(childNodesOf(branch), ctx, withMarks, scope),
+        ),
+      );
       break;
     default:
       appendRunText(pieces, childNode, tag, withMarks);
@@ -537,7 +612,12 @@ const appendRunChild = (pieces: Piece[], childNode: XNode, tag: string | undefin
 
 /** Appends to `pieces` the text one child of a run gives: its `w:t`, a symbol, a hyphen, a tab, a line break; any other
  *  child gives nothing. */
-const appendRunText = (pieces: Piece[], childNode: XNode, tag: string | undefined, withMarks: (text: string) => Piece): void => {
+const appendRunText = (
+  pieces: Piece[],
+  childNode: XNode,
+  tag: string | undefined,
+  withMarks: (text: string) => Piece,
+): void => {
   switch (tag) {
     case "w:t": {
       const text = textContentOf(childNode);
@@ -567,6 +647,9 @@ const appendRunText = (pieces: Piece[], childNode: XNode, tag: string | undefine
     }
     case "w:cr":
       pieces.push(withMarks("\n"));
+      break;
+    // A child with no qualified name gives nothing, like any other child not listed here.
+    case undefined:
       break;
   }
 };
@@ -650,7 +733,9 @@ const hyperlinkPieces = (link: XNode, ctx: ReadContext, scope: InlineScope): Pie
   const external = externalLinkTarget(relationship);
   const href = external ?? (bookmark !== undefined && ctx.anchors.targeted.has(bookmark) ? `#${bookmark}` : undefined);
   if (href === undefined) return innerPieces;
-  return innerPieces.map((piece) => (piece.kind === "inline" ? { kind: "inline", inline: { ...piece.inline, href } } : piece));
+  return innerPieces.map((piece) =>
+    piece.kind === "inline" ? { kind: "inline", inline: { ...piece.inline, href } } : piece,
+  );
 };
 
 /**
@@ -659,7 +744,10 @@ const hyperlinkPieces = (link: XNode, ctx: ReadContext, scope: InlineScope): Pie
  * only when every one is anchored by an offset from the same frames; any
  * other case keeps the file order (no order is invented).
  */
-const orderedAfter = (after: readonly Extract<Piece, { kind: "after" }>[], limits: ReaderLimits | undefined): IRBlock[] => {
+const orderedAfter = (
+  after: readonly Extract<Piece, { kind: "after" }>[],
+  limits: ReaderLimits | undefined,
+): IRBlock[] => {
   const keys = after.map((piece) => piece.anchor);
   const first = keys[0];
   const comparable =
@@ -674,7 +762,10 @@ const orderedAfter = (after: readonly Extract<Piece, { kind: "after" }>[], limit
       return firstKey.v - secondKey.v || firstKey.h - secondKey.h || firstIndex - secondIndex;
     });
   }
-  return inRelationOrder(order.map((pieceIndex) => after[pieceIndex]!), limits);
+  return inRelationOrder(
+    order.map((pieceIndex) => after[pieceIndex]!),
+    limits,
+  );
 };
 
 /** The blocks of the pieces, in the order given, with the text boxes of each
@@ -686,13 +777,19 @@ const orderedAfter = (after: readonly Extract<Piece, { kind: "after" }>[], limit
  *  A drawing without an offset anchor is a cluster of its own. The boxes keep
  *  the places they had among the other blocks (the pictures stay put): only
  *  which box goes in which place changes, so nothing is lost or repeated. */
-const inRelationOrder = (pieces: readonly Extract<Piece, { kind: "after" }>[], limits: ReaderLimits | undefined): IRBlock[] => {
+const inRelationOrder = (
+  pieces: readonly Extract<Piece, { kind: "after" }>[],
+  limits: ReaderLimits | undefined,
+): IRBlock[] => {
   interface Cell {
     blocks: IRBlock[];
     unit?: { cluster: string; box: Box; notLabel: boolean };
   }
   const cells: Cell[] = [];
-  const clusters = new Map<string, { offsetOf: (box: Box) => Box; connectors: DiagramConnector[]; obstacles: Box[]; slots: number[] }>();
+  const clusters = new Map<
+    string,
+    { offsetOf: (box: Box) => Box; connectors: DiagramConnector[]; obstacles: Box[]; slots: number[] }
+  >();
   pieces.forEach((piece, index) => {
     const anchor = piece.anchor;
     const key = anchor === undefined ? `alone:${index}` : `${anchor.vFrom}|${anchor.hFrom}`;
@@ -708,7 +805,12 @@ const inRelationOrder = (pieces: readonly Extract<Piece, { kind: "after" }>[], l
     if (diagram !== undefined) {
       for (const connector of diagram.connectors) {
         cluster.connectors.push({
-          ends: { x1: connector.ends.x1 + dx, y1: connector.ends.y1 + dy, x2: connector.ends.x2 + dx, y2: connector.ends.y2 + dy },
+          ends: {
+            x1: connector.ends.x1 + dx,
+            y1: connector.ends.y1 + dy,
+            x2: connector.ends.x2 + dx,
+            y2: connector.ends.y2 + dy,
+          },
           startArrow: connector.startArrow,
           endArrow: connector.endArrow,
           visible: connector.visible,
@@ -720,7 +822,10 @@ const inRelationOrder = (pieces: readonly Extract<Piece, { kind: "after" }>[], l
     for (const unit of diagram?.units ?? []) {
       for (; blockIndex < unit.from; blockIndex++) cells.push({ blocks: [piece.blocks[blockIndex]!] });
       cluster.slots.push(cells.length);
-      cells.push({ blocks: piece.blocks.slice(unit.from, unit.to), unit: { cluster: key, box: place(unit.box), notLabel: unit.notLabel } });
+      cells.push({
+        blocks: piece.blocks.slice(unit.from, unit.to),
+        unit: { cluster: key, box: place(unit.box), notLabel: unit.notLabel },
+      });
       blockIndex = unit.to;
     }
     for (; blockIndex < piece.blocks.length; blockIndex++) cells.push({ blocks: [piece.blocks[blockIndex]!] });
@@ -730,9 +835,14 @@ const inRelationOrder = (pieces: readonly Extract<Piece, { kind: "after" }>[], l
     // The pptx element cap, per CLUSTER (separate drawings of one cluster
     // bypass the per-drawing bound): past it today's order stands, nothing
     // is lost — the graph walk is never fed an unbounded diagram.
-    if (cluster.slots.length + cluster.connectors.length + cluster.obstacles.length > (limits?.slideElements ?? NO_CAP)) continue;
+    if (cluster.slots.length + cluster.connectors.length + cluster.obstacles.length > (limits?.slideElements ?? NO_CAP))
+      continue;
     const units = cluster.slots.map((slot) => cells[slot]!);
-    const elements: DiagramElement[] = units.map((cell) => ({ box: cell.unit!.box, node: true, notLabel: cell.unit!.notLabel }));
+    const elements: DiagramElement[] = units.map((cell) => ({
+      box: cell.unit!.box,
+      node: true,
+      notLabel: cell.unit!.notLabel,
+    }));
     const order = orderDiagram({
       elements,
       obstacles: cluster.obstacles.map((box) => ({ box })),
@@ -765,7 +875,8 @@ const merged = (inlines: readonly Inline[]): Inline[] => {
     (previous.marks ?? []).join() === (next.marks ?? []).join();
   for (const inline of inlines) {
     const last = mergedInlines[mergedInlines.length - 1];
-    if (last && same(last, inline)) mergedInlines[mergedInlines.length - 1] = { ...last, text: last.text + inline.text };
+    if (last && same(last, inline))
+      mergedInlines[mergedInlines.length - 1] = { ...last, text: last.text + inline.text };
     else mergedInlines.push(inline);
   }
   return mergedInlines;
@@ -813,7 +924,11 @@ const numberingOf = (
  * Limit: `end` is read as right, so a right-to-left paragraph (w:bidi), where
  * it would flip, comes out on the wrong side.
  */
-const alignmentOf = (pPr: XNode | undefined, paragraphStyle: string | undefined, ctx: ReadContext): BlockAlign | undefined => {
+const alignmentOf = (
+  pPr: XNode | undefined,
+  paragraphStyle: string | undefined,
+  ctx: ReadContext,
+): BlockAlign | undefined => {
   const fromStyle = ctx.styles.paragraphProperty(paragraphStyle, "w:jc");
   const jc = valOfChild(pPr, "w:jc") ?? (fromStyle ? attributeOf(fromStyle, "w:val") : undefined);
   if (jc === "right" || jc === "end") return "right";
@@ -823,11 +938,19 @@ const alignmentOf = (pPr: XNode | undefined, paragraphStyle: string | undefined,
 
 /** Whether a piece shows something on the page: a block, blocks after the paragraph, or a non-blank inline. */
 const showsSomething = (piece: Piece): boolean =>
-  piece.kind === "block" || (piece.kind === "after" && piece.blocks.length > 0) || (piece.kind === "inline" && piece.inline.text.trim().length > 0);
+  piece.kind === "block" ||
+  (piece.kind === "after" && piece.blocks.length > 0) ||
+  (piece.kind === "inline" && piece.inline.text.trim().length > 0);
 
 /** The words of the paragraph and heading blocks, blanks collapsed. */
 const ownTextOf = (blocks: readonly IRBlock[]): string =>
-  collapseBlanks(blocks.flatMap((block) => (block.kind === "paragraph" || block.kind === "heading" ? block.inlines.map((inline) => inline.text) : [])).join(""));
+  collapseBlanks(
+    blocks
+      .flatMap((block) =>
+        block.kind === "paragraph" || block.kind === "heading" ? block.inlines.map((inline) => inline.text) : [],
+      )
+      .join(""),
+  );
 
 /** One `w:p`: its text blocks (a heading or a paragraph, split by in-line pictures), then the blocks it puts after
  *  itself, and its place in a list. */
@@ -938,7 +1061,14 @@ const assembleLists = (units: readonly Unit[]): IRBlock[] =>
       .map((unit) => ({
         blocks: unit.blocks,
         ...(unit.list
-          ? { list: { level: unit.list.ilvl, ordered: unit.list.ordered, key: unit.list.numId, ...(unit.list.value !== 1 ? { start: unit.list.value } : {}) } }
+          ? {
+              list: {
+                level: unit.list.ilvl,
+                ordered: unit.list.ordered,
+                key: unit.list.numId,
+                ...(unit.list.value !== 1 ? { start: unit.list.value } : {}),
+              },
+            }
           : {}),
       })),
     // An empty item is not published; the lists at its level close so the next item reopens with its true number as `start`.
@@ -953,8 +1083,14 @@ const wrapped = (wrapper: XNode, childrenOf: (node: XNode) => XNode[]): XNode[] 
   const content = qualifiedNameOf(wrapper) === "w:sdt" ? sdtContent(wrapper) : undefined;
   return content ? childrenOf(content) : [];
 };
-const rowsOf = (tbl: XNode): XNode[] => childNodesOf(tbl).flatMap((childNode) => (qualifiedNameOf(childNode) === "w:tr" ? [childNode] : wrapped(childNode, rowsOf)));
-const cellsOf = (tr: XNode): XNode[] => childNodesOf(tr).flatMap((childNode) => (qualifiedNameOf(childNode) === "w:tc" ? [childNode] : wrapped(childNode, cellsOf)));
+const rowsOf = (tbl: XNode): XNode[] =>
+  childNodesOf(tbl).flatMap((childNode) =>
+    qualifiedNameOf(childNode) === "w:tr" ? [childNode] : wrapped(childNode, rowsOf),
+  );
+const cellsOf = (tr: XNode): XNode[] =>
+  childNodesOf(tr).flatMap((childNode) =>
+    qualifiedNameOf(childNode) === "w:tc" ? [childNode] : wrapped(childNode, cellsOf),
+  );
 
 const intValOfChild = (parent: XNode | undefined, tag: string): number | undefined => {
   return intAttr(valOfChild(parent, tag));
@@ -985,7 +1121,12 @@ const isHeaderRow = (trPr: XNode | undefined): boolean => {
 
 /** The cells of one row. `merging` holds, by grid column, the cell a vertical merge started above: a continuation grows
  *  its rowspan instead of giving a cell. */
-const tableRowCells = (tr: XNode, ctx: ReadContext, merging: Map<number, TableCell>, gridColumns: number): TableCell[] => {
+const tableRowCells = (
+  tr: XNode,
+  ctx: ReadContext,
+  merging: Map<number, TableCell>,
+  gridColumns: number,
+): TableCell[] => {
   const trPr = findChild(tr, "w:trPr");
   const header = isHeaderRow(trPr);
   const cells: TableCell[] = [];
@@ -1112,7 +1253,11 @@ const internalLinkAnchor = (hyperlink: XNode, relationships: ReadonlyMap<string,
 };
 
 /** Adds to `found` the bookmark a `w:hyperlink` targets, when it is an internal link. */
-const addInternalLinkAnchor = (found: Set<string>, hyperlink: XNode, relationships: ReadonlyMap<string, Relationship>): void => {
+const addInternalLinkAnchor = (
+  found: Set<string>,
+  hyperlink: XNode,
+  relationships: ReadonlyMap<string, Relationship>,
+): void => {
   const name = internalLinkAnchor(hyperlink, relationships);
   if (name !== undefined) found.add(name);
 };
@@ -1164,7 +1309,8 @@ export const targetedBookmarks = (story: XNode, relationships: ReadonlyMap<strin
  *  bookmark missing, or in no text block) is published as text — never a
  *  dead link (decided) — and the text merges back with its neighbours. */
 export const dropDeadAnchorLinks = (blocks: IRBlock[], placed: ReadonlySet<string>): IRBlock[] => {
-  const isDead = (inline: Inline): boolean => inline.href !== undefined && inline.href.startsWith("#") && !placed.has(inline.href.slice(1));
+  const isDead = (inline: Inline): boolean =>
+    inline.href !== undefined && inline.href.startsWith("#") && !placed.has(inline.href.slice(1));
   // Only a block that loses a link is touched (and merged again).
   const fixInlines = (inlines: Inline[]): Inline[] =>
     inlines.some(isDead)

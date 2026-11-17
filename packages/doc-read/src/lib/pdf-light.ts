@@ -1,5 +1,5 @@
 /**
- * THE READER-FREE HALF OF THE PDF PACKAGE (`skryba/light`): the conservation check of a PDF and the shapes it speaks
+ * THE READER-FREE HALF OF THE PDF PACKAGE (`pdf-skryba/light`): the conservation check of a PDF and the shapes it speaks
  * in, with no reader behind them — importing this loads no PDF, no zip, no XML.
  *
  * WHY IT IS NOT `lib/light.ts`. That one is the APP's light door, and the app publishes every format: it carries the

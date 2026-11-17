@@ -59,7 +59,9 @@ export const openPdfSource = async (
       onOpen: (pageCount) => {
         if (firstPages !== undefined) return;
         if (pageCount > pageLimit) {
-          throw new ReaderError("DOCUMENT_TOO_MANY_PAGES", `pdf has ${pageCount} pages, limit is ${pageLimit}`, { pageCount });
+          throw new ReaderError("DOCUMENT_TOO_MANY_PAGES", `pdf has ${pageCount} pages, limit is ${pageLimit}`, {
+            pageCount,
+          });
         }
       },
       wantOps: wantsPage,
@@ -116,7 +118,11 @@ export const glyphReader =
 // then a crash here fell back to « no signal » (flat text, never fatal); it now refuses the document: « nothing found » would
 // read an OCR-layer scan as digital and publish the layer (review of cfe20d24, 05/10/2026). Measured the same day: the
 // pass crashed on 0 of the 114 corpus PDFs it opens. The crash's own text is dropped (CLAUDE.md, error messages).
-export const readPageSignals = async (bytes: Uint8Array, source: PdfSource, cost: ExtractionCost): Promise<PdfPageSignals> => {
+export const readPageSignals = async (
+  bytes: Uint8Array,
+  source: PdfSource,
+  cost: ExtractionCost,
+): Promise<PdfPageSignals> => {
   try {
     // The detector shares this reading: without it, it reopened the document and re-extracted all its text.
     return await detectPdfPageSignals(bytes, source, cost);

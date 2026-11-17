@@ -214,8 +214,10 @@ export function chargeFormCall(budget: Pick<GlyphBudget, "forms">): void {
   if (budget.forms > MAX_FORM_CALLS_PER_PAGE) throw new PdfObjectsRefusal("forms-too-many");
 }
 
-const isHighSurrogate = (text: string | undefined): boolean => text?.length === 1 && text.charCodeAt(0) >= 0xd800 && text.charCodeAt(0) <= 0xdbff;
-const isLowSurrogate = (text: string | undefined): boolean => text?.length === 1 && text.charCodeAt(0) >= 0xdc00 && text.charCodeAt(0) <= 0xdfff;
+const isHighSurrogate = (text: string | undefined): boolean =>
+  text?.length === 1 && text.charCodeAt(0) >= 0xd800 && text.charCodeAt(0) <= 0xdbff;
+const isLowSurrogate = (text: string | undefined): boolean =>
+  text?.length === 1 && text.charCodeAt(0) >= 0xdc00 && text.charCodeAt(0) <= 0xdfff;
 
 /** The glyphs of a painted string, cut according to the font's code width.
  *  🔴 THE PAIRING OF HALF-PAIRS IS DONE HERE (31/10/2026: "we have to do it ourselves", for
@@ -273,7 +275,12 @@ function afterGraphicsState(op: string, state: TextState, saved: TextState[]): T
 }
 
 /** The glyphs one show operator paints, or `undefined` when the operator shows nothing. */
-function shownGlyphs(op: string, operands: readonly PdfValue[], state: TextState, budget: GlyphBudget): OurGlyph[] | undefined {
+function shownGlyphs(
+  op: string,
+  operands: readonly PdfValue[],
+  state: TextState,
+  budget: GlyphBudget,
+): OurGlyph[] | undefined {
   const glyphs: OurGlyph[] = [];
   if (op === "Tj" || op === "'" || op === '"') {
     const shown = operands[operands.length - 1];
@@ -315,7 +322,13 @@ function walkForm(
 }
 
 /** The text operators of a stream, in order, forms unrolled as pdf.js unrolled them. */
-function walk(walking: Walking, ops: readonly ContentOp[], resources: PdfDict | undefined, depth: number, inherited: TextState): void {
+function walk(
+  walking: Walking,
+  ops: readonly ContentOp[],
+  resources: PdfDict | undefined,
+  depth: number,
+  inherited: TextState,
+): void {
   const fonts = walking.doc.dictOf(resources?.get("Font"));
   const xobjects = walking.doc.dictOf(resources?.get("XObject"));
   let state = inherited;
@@ -371,7 +384,13 @@ export function openOurGlyphs(bytes: Uint8Array): OurGlyphSource {
       const page = pages[index];
       if (page === undefined) throw new PdfObjectsRefusal("page-missing");
       const into: ShownGlyphs[] = [];
-      walk({ doc, into, memo, budget: { painted: 0, forms: 0 } }, readContentOps(pageContentOf(doc, page)), page.resources, 0, UNKNOWN);
+      walk(
+        { doc, into, memo, budget: { painted: 0, forms: 0 } },
+        readContentOps(pageContentOf(doc, page)),
+        page.resources,
+        0,
+        UNKNOWN,
+      );
       return into;
     },
   };

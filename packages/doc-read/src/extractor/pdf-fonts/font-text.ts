@@ -93,7 +93,11 @@ function programEncodingOf(reader: FontReader, font: PdfDict): readonly string[]
   }
 }
 
-export function encodingChoiceOf(reader: FontReader, font: PdfDict, builtIn?: string): Parameters<typeof encodingNames>[0] {
+export function encodingChoiceOf(
+  reader: FontReader,
+  font: PdfDict,
+  builtIn?: string,
+): Parameters<typeof encodingNames>[0] {
   const encoding = reader.resolve(font.get("Encoding"));
   const dict = encoding?.kind === "dict" ? encoding.entries : undefined;
   const named = nameOf(encoding) ?? nameOf(reader.resolve(dict?.get("BaseEncoding")));
@@ -117,7 +121,12 @@ export function encodingChoiceOf(reader: FontReader, font: PdfDict, builtIn?: st
 export type FontTextMemo = Map<number, ToUnicode | undefined>;
 
 /** The `/ToUnicode` table of a font, or `undefined` when it has none or it cannot be read. */
-function toUnicodeOf(reader: FontReader, font: PdfDict, memo: FontTextMemo | undefined, budget: TableBudget | undefined): ToUnicode | undefined {
+function toUnicodeOf(
+  reader: FontReader,
+  font: PdfDict,
+  memo: FontTextMemo | undefined,
+  budget: TableBudget | undefined,
+): ToUnicode | undefined {
   const stream = reader.resolve(font.get("ToUnicode"));
   if (stream?.kind !== "stream") return undefined;
   if (memo?.has(stream.start) === true) return memo.get(stream.start);
@@ -142,7 +151,12 @@ function toUnicodeOf(reader: FontReader, font: PdfDict, memo: FontTextMemo | und
  *  Who calls it and why: `extractor/pdf-glyph-source.ts`, the only one to see the sequence of painted codes, pairs these
  *  half-pairs (31/10/2026: "we have to do it ourselves", for emojis). It is therefore not a
  *  second reading of the CMap: it is the SAME table, whose refused part is exposed. */
-export function fontDeclaredText(reader: FontReader, font: PdfDict, memo?: FontTextMemo, budget?: TableBudget): (code: number) => string | undefined {
+export function fontDeclaredText(
+  reader: FontReader,
+  font: PdfDict,
+  memo?: FontTextMemo,
+  budget?: TableBudget,
+): (code: number) => string | undefined {
   const toUnicode = toUnicodeOf(reader, font, memo, budget);
   return (code) => toUnicode?.rejected.get(code);
 }
@@ -150,7 +164,12 @@ export function fontDeclaredText(reader: FontReader, font: PdfDict, memo?: FontT
 /** The text each code of this font paints. Read once per font; the function it returns is pure.
  *  `memo` shares the `/ToUnicode` tables between the fonts of one document; without it, each font re-reads and
  *  retains its own (see `FontTextMemo`). */
-export function fontText(reader: FontReader, font: PdfDict, memo?: FontTextMemo, budget?: TableBudget): (code: number) => string | undefined {
+export function fontText(
+  reader: FontReader,
+  font: PdfDict,
+  memo?: FontTextMemo,
+  budget?: TableBudget,
+): (code: number) => string | undefined {
   const toUnicode = toUnicodeOf(reader, font, memo, budget);
   const composite = nameOf(reader.resolve(font.get("Subtype"))) === "Type0";
 

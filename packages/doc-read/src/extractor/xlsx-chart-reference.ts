@@ -114,7 +114,8 @@ const pointLinesOf = (grid: ChartGrid): PointLines => {
     add(lines.byColumn, column, row);
     add(lines.byRow, row, column);
   }
-  for (const places of [...lines.byColumn.values(), ...lines.byRow.values()]) places.sort((earlier, later) => earlier - later);
+  for (const places of [...lines.byColumn.values(), ...lines.byRow.values()])
+    places.sort((earlier, later) => earlier - later);
   return lines;
 };
 
@@ -126,14 +127,20 @@ export const sheetChartResolver = (sheetName: string, grid: ChartGrid): ChartRes
   let lines: PointLines | undefined;
   const pointAt = (row: number, column: number, index: number): ChartCellPoint => {
     const number = grid.numberAt(row, column);
-    return { index, text: grid.textAt(row, column), ...(number === undefined ? {} : { stored: String(number.value), formatCode: number.formatCode }) };
+    return {
+      index,
+      text: grid.textAt(row, column),
+      ...(number === undefined ? {} : { stored: String(number.value), formatCode: number.formatCode }),
+    };
   };
   /** The places along the range's line that give a point, and the range's two ends on that line. */
   const lineOf = (range: ChartRange): { across: boolean; places: readonly number[]; first: number; last: number } => {
     lines ??= pointLinesOf(grid);
     const across = range.firstRow === range.lastRow;
     const places = (across ? lines.byRow.get(range.firstRow) : lines.byColumn.get(range.firstColumn)) ?? [];
-    return across ? { across, places, first: range.firstColumn, last: range.lastColumn } : { across, places, first: range.firstRow, last: range.lastRow };
+    return across
+      ? { across, places, first: range.firstColumn, last: range.lastColumn }
+      : { across, places, first: range.firstRow, last: range.lastRow };
   };
   function* pointsOf(range: ChartRange): Generator<ChartCellPoint> {
     const { across, places, first, last } = lineOf(range);

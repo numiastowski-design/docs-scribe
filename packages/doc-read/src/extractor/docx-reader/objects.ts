@@ -11,11 +11,27 @@
 
 import { collapseBlanks } from "doc-ir/lib/blanks";
 import type { ImageRef, IRBlock } from "doc-ir/lib/ir";
-import { fallbackPictureIds, imageOnlyFallback, renderedBranch, WORD_TEXT_TAGS, WORD_UNDERSTOOD } from "../markup-compat";
+import {
+  fallbackPictureIds,
+  imageOnlyFallback,
+  renderedBranch,
+  WORD_TEXT_TAGS,
+  WORD_UNDERSTOOD,
+} from "../markup-compat";
 import { EMU_PER_PT, isWhollyOutside } from "../pptx-reader/geometry";
 import { finiteNumber } from "../../lib/ooxml-num";
 import { isHiddenFlag, isOnOff } from "../../lib/ooxml-bool";
-import { attributeOf, findChild, findDrawingFrame, findGraphicData, childNodesOf, hasMatchingNode, qualifiedNameOf, textContentOf, type XNode } from "../ooxml/xml";
+import {
+  attributeOf,
+  findChild,
+  findDrawingFrame,
+  findGraphicData,
+  childNodesOf,
+  hasMatchingNode,
+  qualifiedNameOf,
+  textContentOf,
+  type XNode,
+} from "../ooxml/xml";
 
 /** Where a floating drawing is anchored (wp:anchor): offsets in EMU
  *  from a reference frame named by `relativeFrom`. Two anchors compare only
@@ -27,7 +43,8 @@ export interface AnchorKey {
   h: number;
 }
 
-type DrawingItem = { readonly kind: "image"; readonly block: IRBlock } | { readonly kind: "textbox"; readonly content: XNode };
+type DrawingItem =
+  { readonly kind: "image"; readonly block: IRBlock } | { readonly kind: "textbox"; readonly content: XNode };
 
 export interface DrawingContent {
   /** `wp:anchor`: the drawing floats and follows its paragraph (decided);
@@ -137,7 +154,9 @@ const anchorKeyOf = (anchor: XNode): AnchorKey | undefined => {
   };
   const vertical = axis("wp:positionV");
   const horizontal = axis("wp:positionH");
-  return vertical && horizontal ? { vFrom: vertical.from, v: vertical.offset, hFrom: horizontal.from, h: horizontal.offset } : undefined;
+  return vertical && horizontal
+    ? { vFrom: vertical.from, v: vertical.offset, hFrom: horizontal.from, h: horizontal.offset }
+    : undefined;
 };
 
 /** wp:inline / wp:anchor, holding one `a:graphic`. */
@@ -151,7 +170,9 @@ export const readDrawing = (drawing: XNode, imageLookup: ImageLookup): DrawingCo
   const topLevel = {
     widthPt: cx !== undefined ? cx / EMU_PER_PT : undefined,
   };
-  const items = graphicData ? childNodesOf(graphicData).flatMap((childNode) => collect(childNode, topLevel, imageLookup)) : [];
+  const items = graphicData
+    ? childNodesOf(graphicData).flatMap((childNode) => collect(childNode, topLevel, imageLookup))
+    : [];
   return { floating, anchor: floating ? anchorKeyOf(frame) : undefined, items };
 };
 
@@ -211,7 +232,12 @@ const mathText = (node: XNode): string => {
     // An n-ary operator shows the character m:chr declares — ∫ when absent,
     // the OMML default — then its limits and its operand.
     case "m:nary":
-      return spaced([mathChar(findChild(node, "m:naryPr"), "m:chr") ?? "∫", childText("m:sub"), childText("m:sup"), childText("m:e")]);
+      return spaced([
+        mathChar(findChild(node, "m:naryPr"), "m:chr") ?? "∫",
+        childText("m:sub"),
+        childText("m:sup"),
+        childText("m:e"),
+      ]);
     // Delimiters: m:begChr, m:sepChr, m:endChr, by default ( | ).
     case "m:d": {
       const dPr = findChild(node, "m:dPr");
@@ -219,7 +245,9 @@ const mathText = (node: XNode): string => {
         .filter((childNode) => qualifiedNameOf(childNode) === "m:e")
         .map(mathText);
       return (
-        (mathChar(dPr, "m:begChr") ?? "(") + elements.join(mathChar(dPr, "m:sepChr") ?? "|") + (mathChar(dPr, "m:endChr") ?? ")")
+        (mathChar(dPr, "m:begChr") ?? "(") +
+        elements.join(mathChar(dPr, "m:sepChr") ?? "|") +
+        (mathChar(dPr, "m:endChr") ?? ")")
       );
     }
     // Any other structure (sub/superscript, radical, function…): its parts
@@ -265,13 +293,18 @@ export const chosenContent = (alternate: XNode): XNode | undefined => renderedBr
  *  object Word draws, e.g. an extended chart). A Fallback
  *  carrying text is never read; the caller asks only after an empty Choice,
  *  so the two branches never come out together. */
-export const unreadChoiceFallback = (alternate: XNode, chosen: XNode, isPixel?: (relId: string) => boolean): XNode | undefined =>
-  imageOnlyFallback(alternate, chosen, WORD_TEXT_TAGS, isPixel);
+export const unreadChoiceFallback = (
+  alternate: XNode,
+  chosen: XNode,
+  isPixel?: (relId: string) => boolean,
+): XNode | undefined => imageOnlyFallback(alternate, chosen, WORD_TEXT_TAGS, isPixel);
 
 /** The ids of the pictures any `mc:Fallback` under this node names: the ones
  *  `docx-reader/index.ts` measures ahead (a 1×1 pixel is junk, not content). */
 export const fallbackPictureRelIds = (node: XNode): string[] =>
-  childNodesOf(node).flatMap((childNode) => (qualifiedNameOf(childNode) === "mc:Fallback" ? fallbackPictureIds(childNode) : fallbackPictureRelIds(childNode)));
+  childNodesOf(node).flatMap((childNode) =>
+    qualifiedNameOf(childNode) === "mc:Fallback" ? fallbackPictureIds(childNode) : fallbackPictureRelIds(childNode),
+  );
 
 /** A page's size, in EMU. */
 export interface PageSize {
@@ -300,7 +333,8 @@ export const largestPage = (body: XNode): PageSize | undefined => {
         const pgSz = findChild(childNode, "w:pgSz");
         const declaredWidth = pgSz ? finiteNumber(attributeOf(pgSz, "w:w")) : undefined;
         const declaredHeight = pgSz ? finiteNumber(attributeOf(pgSz, "w:h")) : undefined;
-        if (declaredWidth === undefined || declaredHeight === undefined || declaredWidth <= 0 || declaredHeight <= 0) unreadable = true;
+        if (declaredWidth === undefined || declaredHeight === undefined || declaredWidth <= 0 || declaredHeight <= 0)
+          unreadable = true;
         else {
           width = Math.max(width, declaredWidth);
           height = Math.max(height, declaredHeight);
@@ -311,7 +345,9 @@ export const largestPage = (body: XNode): PageSize | undefined => {
     }
   };
   walk(body);
-  return sectionCount === 0 || unreadable ? undefined : { widthEmu: width * EMU_PER_TWIP, heightEmu: height * EMU_PER_TWIP };
+  return sectionCount === 0 || unreadable
+    ? undefined
+    : { widthEmu: width * EMU_PER_TWIP, heightEmu: height * EMU_PER_TWIP };
 };
 
 const isRotated = (node: XNode): boolean =>
@@ -345,10 +381,14 @@ export const isOffPage = (drawing: XNode, page: PageSize | undefined): boolean =
   const cx = extent ? finiteNumber(attributeOf(extent, "cx")) : undefined;
   const cy = extent ? finiteNumber(attributeOf(extent, "cy")) : undefined;
   if (cx === undefined || cy === undefined) return false;
-  const outside = (start: number | undefined, size: number, limit: number): boolean => start !== undefined && isWhollyOutside(start, size, limit);
+  const outside = (start: number | undefined, size: number, limit: number): boolean =>
+    start !== undefined && isWhollyOutside(start, size, limit);
   if (isOnOff(attributeOf(frame, "simplePos"), false)) {
     const simplePos = findChild(frame, "wp:simplePos");
-    return outside(simplePos ? finiteNumber(attributeOf(simplePos, "x")) : undefined, cx, page.widthEmu) || outside(simplePos ? finiteNumber(attributeOf(simplePos, "y")) : undefined, cy, page.heightEmu);
+    return (
+      outside(simplePos ? finiteNumber(attributeOf(simplePos, "x")) : undefined, cx, page.widthEmu) ||
+      outside(simplePos ? finiteNumber(attributeOf(simplePos, "y")) : undefined, cy, page.heightEmu)
+    );
   }
   const offsetOnPage = (tag: string): number | undefined => {
     const positionElement = findChild(frame, tag);
@@ -356,5 +396,8 @@ export const isOffPage = (drawing: XNode, page: PageSize | undefined): boolean =
     const posOffset = findChild(positionElement, "wp:posOffset");
     return posOffset ? finiteNumber(textContentOf(posOffset).trim()) : undefined;
   };
-  return outside(offsetOnPage("wp:positionH"), cx, page.widthEmu) || outside(offsetOnPage("wp:positionV"), cy, page.heightEmu);
+  return (
+    outside(offsetOnPage("wp:positionH"), cx, page.widthEmu) ||
+    outside(offsetOnPage("wp:positionV"), cy, page.heightEmu)
+  );
 };

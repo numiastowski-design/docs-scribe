@@ -42,7 +42,8 @@ export interface Numbering {
   next(numId: string, ilvl: number): NumberedItem | undefined;
 }
 
-const intAttributeOf = (element: XNode | undefined, name: string): number | undefined => (element ? intValue(attributeOf(element, name)) : undefined);
+const intAttributeOf = (element: XNode | undefined, name: string): number | undefined =>
+  element ? intValue(attributeOf(element, name)) : undefined;
 
 /** The highest start value we accept, taken as Word's own ceiling (27/09/2026). A file may declare anything: past
  *  2^53 `roman()` looped for ever (1e21 − 1000 === 1e21) and `letters()` built strings as long as the value. Declared
@@ -74,8 +75,19 @@ const readLevel = (lvl: XNode): LevelDefinition => {
 };
 
 const ROMAN: readonly (readonly [number, string])[] = [
-  [1000, "m"], [900, "cm"], [500, "d"], [400, "cd"], [100, "c"], [90, "xc"],
-  [50, "l"], [40, "xl"], [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"],
+  [1000, "m"],
+  [900, "cm"],
+  [500, "d"],
+  [400, "cd"],
+  [100, "c"],
+  [90, "xc"],
+  [50, "l"],
+  [40, "xl"],
+  [10, "x"],
+  [9, "ix"],
+  [5, "v"],
+  [4, "iv"],
+  [1, "i"],
 ];
 
 const roman = (counterValue: number): string => {
@@ -177,7 +189,12 @@ const advanceCounters = (counterValues: (number | undefined)[], ilvl: number, le
 };
 
 /** The number a level displays (its lvlText filled in), or undefined when one of its parts has a format this reader does not spell. */
-const labelOf = (lvlText: string, isLgl: boolean, levels: Levels, counterValues: readonly (number | undefined)[]): string | undefined => {
+const labelOf = (
+  lvlText: string,
+  isLgl: boolean,
+  levels: Levels,
+  counterValues: readonly (number | undefined)[],
+): string | undefined => {
   let complete = true;
   // lvlText: %1 … %9 stand for the current value of levels 0 … 8.
   const label = lvlText.replace(/%([1-9])/g, (_, digit: string) => {
@@ -192,7 +209,10 @@ const labelOf = (lvlText: string, isLgl: boolean, levels: Levels, counterValues:
   return complete ? label : undefined;
 };
 
-export const readNumbering = (root: XNode | undefined, numIdOfStyle: NumberingStyleLookup = () => undefined): Numbering => {
+export const readNumbering = (
+  root: XNode | undefined,
+  numIdOfStyle: NumberingStyleLookup = () => undefined,
+): Numbering => {
   const abstractNums = readAbstractNums(root);
   // `w:num` is walked TWICE on purpose: a `w:numStyleLink` may lead to a numId declared further down, so every numId
   // must be known before any instance's levels are resolved (held by `docx-reader.test.ts`, « a numId declared
@@ -214,7 +234,7 @@ export const readNumbering = (root: XNode | undefined, numIdOfStyle: NumberingSt
     if (abstractNum.levels.size > 0 || abstractNum.numStyleLink === undefined) return abstractNum.levels;
     const linkedNumId = numIdOfStyle(abstractNum.numStyleLink);
     const linkedAbstractNumId = linkedNumId === undefined ? undefined : abstractNumIdByNumId.get(linkedNumId);
-    return linkedAbstractNumId === undefined ? new Map() : levelsOf(linkedAbstractNumId, seen);
+    return linkedAbstractNumId === undefined ? new Map<number, LevelDefinition>() : levelsOf(linkedAbstractNumId, seen);
   };
 
   // w:num: an instance points at an abstract definition and may
@@ -245,7 +265,8 @@ export const readNumbering = (root: XNode | undefined, numIdOfStyle: NumberingSt
 
     const value = counterValues[ilvl] ?? level.start;
     const ordered = !UNNUMBERED.has(level.numFmt);
-    const label = ordered && level.lvlText !== undefined ? labelOf(level.lvlText, level.isLgl, levels, counterValues) : undefined;
+    const label =
+      ordered && level.lvlText !== undefined ? labelOf(level.lvlText, level.isLgl, levels, counterValues) : undefined;
     return { ordered, value, label, separator: level.suff === "nothing" ? "" : " " };
   };
 

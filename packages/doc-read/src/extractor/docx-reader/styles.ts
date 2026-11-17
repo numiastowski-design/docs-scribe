@@ -58,10 +58,12 @@ export const onOff = (element: XNode): boolean => {
 };
 
 /** The first child named `tag` of a parent that may be absent. */
-const childOf = (parent: XNode | undefined, tag: string): XNode | undefined => (parent ? findChild(parent, tag) : undefined);
+const childOf = (parent: XNode | undefined, tag: string): XNode | undefined =>
+  parent ? findChild(parent, tag) : undefined;
 
 /** The `w:val` of a declaration that may be absent. */
-const valAttributeOf = (declaration: XNode | undefined): string | undefined => (declaration ? attributeOf(declaration, "w:val") : undefined);
+const valAttributeOf = (declaration: XNode | undefined): string | undefined =>
+  declaration ? attributeOf(declaration, "w:val") : undefined;
 
 /** A toggle declaration's value; an absent declaration is off. */
 const toggleValueOf = (declaration: XNode | undefined): boolean => (declaration ? onOff(declaration) : false);
@@ -98,7 +100,7 @@ const TOGGLES: readonly (readonly [string, InlineMark])[] = [
   ["w:strike", "strike"],
 ];
 
-const MARK_ORDER: readonly InlineMark[] =["strong", "em", "underline", "strike", "sup", "sub"];
+const MARK_ORDER: readonly InlineMark[] = ["strong", "em", "underline", "strike", "sup", "sub"];
 
 /** 🔴 THE TWO TEXT COLOURS WE NEVER PUBLISH, a bias chosen and written (10/11/2026).
  *  Neither says « this passage stands out », and each ERASES the text on one of Confluence's two themes, which makes
@@ -148,7 +150,10 @@ const statedHex = (node: XNode | undefined, valueAttribute: string, themeAttribu
 };
 
 /** The style and its ancestors, nearest first; a basedOn cycle stops. */
-const basedOnChainOf = (stylesById: ReadonlyMap<string, StyleDefinition>, styleId: string | undefined): StyleDefinition[] => {
+const basedOnChainOf = (
+  stylesById: ReadonlyMap<string, StyleDefinition>,
+  styleId: string | undefined,
+): StyleDefinition[] => {
   const chainedStyles: StyleDefinition[] = [];
   const seen = new Set<string>();
   let current = styleId;
@@ -160,6 +165,17 @@ const basedOnChainOf = (stylesById: ReadonlyMap<string, StyleDefinition>, styleI
     current = style.basedOn;
   }
   return chainedStyles;
+};
+
+/** The marks of the non-toggle properties, from their nearest declaration: underline, superscript, subscript. */
+const addNonToggleMarks = (nearest: (tag: string) => XNode | undefined, foundMarks: Set<InlineMark>): void => {
+  // Every underline value but `none` draws a line (held by `docx-reader.test.ts`, test « 05 »).
+  const underlineValue = valAttributeOf(nearest("w:u"));
+  if (underlineValue !== undefined && underlineValue !== "none") foundMarks.add("underline");
+
+  const vertAlignValue = valAttributeOf(nearest("w:vertAlign"));
+  if (vertAlignValue === "superscript") foundMarks.add("sup");
+  if (vertAlignValue === "subscript") foundMarks.add("sub");
 };
 
 export const readStyles = (root: XNode | undefined): Styles => {
@@ -187,7 +203,12 @@ export const readStyles = (root: XNode | undefined): Styles => {
   };
 
   /** A toggle property's value for a run. Held by `docx-reader.test.ts` (« styles toggle »). */
-  const toggle = (tag: string, paragraphStyleId: string | undefined, characterStyleId: string | undefined, rPr: XNode | undefined): boolean => {
+  const toggle = (
+    tag: string,
+    paragraphStyleId: string | undefined,
+    characterStyleId: string | undefined,
+    rPr: XNode | undefined,
+  ): boolean => {
     const direct = childOf(rPr, tag);
     // Direct formatting sets the absolute value.
     if (direct) return onOff(direct);
@@ -201,7 +222,8 @@ export const readStyles = (root: XNode | undefined): Styles => {
     return valueAfterParagraphStyle !== toggleValueOf(fromCharacter);
   };
 
-  const characterStyleOf = (rPr: XNode | undefined): string | undefined => valOfChild(rPr, "w:rStyle") ?? defaultCharacterStyleId;
+  const characterStyleOf = (rPr: XNode | undefined): string | undefined =>
+    valOfChild(rPr, "w:rStyle") ?? defaultCharacterStyleId;
 
   const hidden = (paragraphStyleId: string | undefined, rPr: XNode | undefined): boolean =>
     toggle("w:vanish", paragraphStyleId ?? defaultParagraphStyleId, characterStyleOf(rPr), rPr);
@@ -209,11 +231,13 @@ export const readStyles = (root: XNode | undefined): Styles => {
   /** The nearest declaration of a non-toggle run property: direct formatting, then the character style, then the
    *  paragraph style, then the document defaults. ONE hierarchy, named once: `marks` and `colours` both read it, and
    *  writing it twice would let the two drift apart. */
-  const nearestOf = (paragraphStyleId: string | undefined, characterStyleId: string | undefined, rPr: XNode | undefined) => (tag: string): XNode | undefined =>
-    childOf(rPr, tag) ??
-    nearestRunProperty(characterStyleId, tag) ??
-    nearestRunProperty(paragraphStyleId, tag) ??
-    childOf(rPrDefault, tag);
+  const nearestOf =
+    (paragraphStyleId: string | undefined, characterStyleId: string | undefined, rPr: XNode | undefined) =>
+    (tag: string): XNode | undefined =>
+      childOf(rPr, tag) ??
+      nearestRunProperty(characterStyleId, tag) ??
+      nearestRunProperty(paragraphStyleId, tag) ??
+      childOf(rPrDefault, tag);
 
   const marks = (paragraphStyleId: string | undefined, rPr: XNode | undefined): InlineMark[] => {
     const effectiveParagraphStyleId = paragraphStyleId ?? defaultParagraphStyleId;
@@ -224,16 +248,7 @@ export const readStyles = (root: XNode | undefined): Styles => {
       if (toggle(tag, effectiveParagraphStyleId, characterStyleId, rPr)) foundMarks.add(mark);
     }
 
-    const nearest = nearestOf(effectiveParagraphStyleId, characterStyleId, rPr);
-
-    // Every underline value but `none` draws a line (held by `docx-reader.test.ts`, test « 05 »).
-    const underlineValue = valAttributeOf(nearest("w:u"));
-    if (underlineValue !== undefined && underlineValue !== "none") foundMarks.add("underline");
-
-    const vertAlignValue = valAttributeOf(nearest("w:vertAlign"));
-    if (vertAlignValue === "superscript") foundMarks.add("sup");
-    if (vertAlignValue === "subscript") foundMarks.add("sub");
-
+    addNonToggleMarks(nearestOf(effectiveParagraphStyleId, characterStyleId, rPr), foundMarks);
     return MARK_ORDER.filter((mark) => foundMarks.has(mark));
   };
 
@@ -250,7 +265,10 @@ export const readStyles = (root: XNode | undefined): Styles => {
    * `w:highlight` gives a NAME, handed on in lower case as a CSS keyword: a case fold, not a table. `auto` and `none`
    * state « no colour » and publish nothing.
    */
-  const colours = (paragraphStyleId: string | undefined, rPr: XNode | undefined): { color?: string; background?: string } => {
+  const colours = (
+    paragraphStyleId: string | undefined,
+    rPr: XNode | undefined,
+  ): { color?: string; background?: string } => {
     const nearest = nearestOf(paragraphStyleId ?? defaultParagraphStyleId, characterStyleOf(rPr), rPr);
 
     // 🔴 THE TEXT COLOUR IS TAKEN FROM THE RUN ITSELF ONLY, never inherited from a style (10/11/2026). A style's colour
@@ -265,7 +283,8 @@ export const readStyles = (root: XNode | undefined): Styles => {
     // still an author's gesture.
     const highlightValue = valAttributeOf(nearest("w:highlight"));
     // The highlight wins over the shading when both are stated: it is the mark a reader of the document sees.
-    const background = highlightValue !== undefined && highlightValue !== "none" ? highlightValue.toLowerCase() : shading;
+    const background =
+      highlightValue !== undefined && highlightValue !== "none" ? highlightValue.toLowerCase() : shading;
 
     return { ...(color !== undefined ? { color } : {}), ...(background !== undefined ? { background } : {}) };
   };

@@ -22,19 +22,52 @@ import { withholdOversizedTables } from "doc-ir/lib/table-width-cap";
 import type { DocumentNotice } from "doc-ir/lib/reader-types";
 import type { ImageRef, IRBlock, IRDoc } from "doc-ir/lib/ir";
 import { columnsBackToTables, layoutTablesToColumns } from "./layout-tables";
-import { dropDeadAnchorLinks, freshFields, type NotePart, type ReadContext, readBlocks, targetedBookmarks } from "./body";
+import {
+  dropDeadAnchorLinks,
+  freshFields,
+  type NotePart,
+  type ReadContext,
+  readBlocks,
+  targetedBookmarks,
+} from "./body";
 import { ImageCollector } from "../image-collector";
 import { imagePixelWidth } from "doc-ir/extractor/image-pixel-width";
 import { type DrawingObjects, preloadObjects } from "./drawing-objects";
-import { type DrawingLedger, type GoogleDrawingSource, googlePictures, newDrawingLedger, PENDING_DRAWING_REF } from "./google-drawings";
+import {
+  type DrawingLedger,
+  type GoogleDrawingSource,
+  googlePictures,
+  newDrawingLedger,
+  PENDING_DRAWING_REF,
+} from "./google-drawings";
 import { mapImageRefs } from "./image-refs";
 import { readNumbering } from "./numbering";
 import { isOnePixel } from "../image-reduction";
 import { fallbackPictureRelIds, type ImageLookup, largestPage } from "./objects";
-import { createDamagedError, type OpcPackage, IMAGE_MAX_TOTAL_BYTES, openPackage, OverAllowanceError, readUnlessDamaged, PartDamagedError, readOrFlag, type Relationship, findRelationshipOfKind } from "../ooxml/package";
+import {
+  createDamagedError,
+  type OpcPackage,
+  IMAGE_MAX_TOTAL_BYTES,
+  openPackage,
+  OverAllowanceError,
+  readUnlessDamaged,
+  PartDamagedError,
+  readOrFlag,
+  type Relationship,
+  findRelationshipOfKind,
+} from "../ooxml/package";
 import type { DrawingImageRegistrar } from "./shapes";
 import { readStyles } from "./styles";
-import { attributeOf, findChild, findChildren, childNodesOf, hasMatchingNode, qualifiedNameOf, textContentOf, type XNode } from "../ooxml/xml";
+import {
+  attributeOf,
+  findChild,
+  findChildren,
+  childNodesOf,
+  hasMatchingNode,
+  qualifiedNameOf,
+  textContentOf,
+  type XNode,
+} from "../ooxml/xml";
 
 /** A picture's bytes as the reader hands them on, keyed by sha256. Same shape as the shared declaration
  *  `doc-ir/extractor/raw-image.ts#RawImage`, kept local to this reader. */
@@ -90,9 +123,15 @@ export const assertNoPendingRef = (doc: IRDoc): void => {
 };
 
 /** The image relationship `relId` names, when it is internal and its part exists. */
-const internalImage = (pkg: OpcPackage, relationships: ReadonlyMap<string, Relationship>, relId: string): Relationship | undefined => {
+const internalImage = (
+  pkg: OpcPackage,
+  relationships: ReadonlyMap<string, Relationship>,
+  relId: string,
+): Relationship | undefined => {
   const relationship = relationships.get(relId);
-  return relationship && relationship.kind === "image" && !relationship.external && pkg.hasPart(relationship.target) ? relationship : undefined;
+  return relationship && relationship.kind === "image" && !relationship.external && pkg.hasPart(relationship.target)
+    ? relationship
+    : undefined;
 };
 
 /**
@@ -110,22 +149,27 @@ const pictures = (pkg: OpcPackage, onDamaged: () => ReaderError, limits: ReaderL
   // Pictures the walk asked for whose part cannot be read at all (absent from the archive, linked externally, relationship
   // that does not resolve): said like a damaged one, in the same `image-missing` count.
   let unreachable = 0;
-  const lookup = (relationships: ReadonlyMap<string, Relationship>): ImageLookup => (relId) => {
-    const relationship = internalImage(pkg, relationships, relId);
-    if (!relationship) {
-      unreachable++;
-      return undefined;
-    }
-    let targetIndex = indexOf.get(relationship.target);
-    if (targetIndex === undefined) {
-      targetIndex = targets.push(relationship.target) - 1;
-      indexOf.set(relationship.target, targetIndex);
-    }
-    // The declared type crosses only from our list.
-    return { sha256: `${PENDING_REF}${targetIndex}`, mimeType: listedMimeType(pkg.contentType(relationship.target)) };
-  };
+  const lookup =
+    (relationships: ReadonlyMap<string, Relationship>): ImageLookup =>
+    (relId) => {
+      const relationship = internalImage(pkg, relationships, relId);
+      if (!relationship) {
+        unreachable++;
+        return undefined;
+      }
+      let targetIndex = indexOf.get(relationship.target);
+      if (targetIndex === undefined) {
+        targetIndex = targets.push(relationship.target) - 1;
+        indexOf.set(relationship.target, targetIndex);
+      }
+      // The declared type crosses only from our list.
+      return { sha256: `${PENDING_REF}${targetIndex}`, mimeType: listedMimeType(pkg.contentType(relationship.target)) };
+    };
 
-  const resolve = async (blocks: IRBlock[], totalBudget: number = limits?.payloadBytes ?? IMAGE_MAX_TOTAL_BYTES): Promise<{ blocks: IRBlock[]; images: RawImage[]; dropped: number }> => {
+  const resolve = async (
+    blocks: IRBlock[],
+    totalBudget: number = limits?.payloadBytes ?? IMAGE_MAX_TOTAL_BYTES,
+  ): Promise<{ blocks: IRBlock[]; images: RawImage[]; dropped: number }> => {
     // `undefined` = that picture's part is damaged: its image blocks leave the page, the rest is published.
     const refs: (Pick<ImageRef, "sha256" | "mimeType" | "pixelWidth"> | undefined)[] = [];
     // Reduces an oversized picture before its sha256 (the published bytes name the attachment).
@@ -158,7 +202,11 @@ const pictures = (pkg: OpcPackage, onDamaged: () => ReaderError, limits: ReaderL
       const collected = collector.collect(bytes, listedMimeType(pkg.contentType(target)));
       // The file's own width (the reduced file's when reduced): the page never draws the image wider (G2).
       const pixelWidth = collected.pixelWidth ?? imagePixelWidth(bytes);
-      refs.push({ sha256: collected.sha256, mimeType: collected.mimeType, ...(pixelWidth !== undefined ? { pixelWidth } : {}) });
+      refs.push({
+        sha256: collected.sha256,
+        mimeType: collected.mimeType,
+        ...(pixelWidth !== undefined ? { pixelWidth } : {}),
+      });
     }
     let dropped = 0;
     const patch = (ref: ImageRef): ImageRef | undefined => {
@@ -182,7 +230,10 @@ interface Story {
 }
 
 /** The styles and the numbering of the document. A damaged part is not a reason to refuse: default formatting, said in one notice (08/10/2026). */
-const readFormattingParts = async (pkg: OpcPackage, relationships: ReadonlyMap<string, Relationship>): Promise<Pick<ReadContext, "styles" | "numbering"> & { stylesDefaulted: boolean }> => {
+const readFormattingParts = async (
+  pkg: OpcPackage,
+  relationships: ReadonlyMap<string, Relationship>,
+): Promise<Pick<ReadContext, "styles" | "numbering"> & { stylesDefaulted: boolean }> => {
   const partOfKind = async (kind: string) => {
     const relationship = findRelationshipOfKind(relationships, kind);
     return relationship ? pkg.readXml(relationship.target) : undefined;
@@ -261,7 +312,11 @@ const newNoteCalls = () => {
 /** The stories whose charts and SmartArts are read ahead of the walk (`docx-reader/drawing-objects.ts`): the body, then the notes it
  *  calls. Each notes part is parsed ONCE, here, and handed to `noteBlocks` (every inflate counts against PACKAGE_MAX_BYTES: a part
  *  read twice counts twice). A body that calls no note reads none: a note is only ever called from the body, then from another note. */
-const loadNoteStories = async (pkg: OpcPackage, relationships: ReadonlyMap<string, Relationship>, body: XNode): Promise<{ storyRoots: Story[]; noteStories: Map<NotePart, Story> }> => {
+const loadNoteStories = async (
+  pkg: OpcPackage,
+  relationships: ReadonlyMap<string, Relationship>,
+  body: XNode,
+): Promise<{ storyRoots: Story[]; noteStories: Map<NotePart, Story> }> => {
   const storyRoots: Story[] = [{ root: body, rels: relationships }];
   const noteStories = new Map<NotePart, Story>();
   if (callsNotes(body)) {
@@ -283,7 +338,11 @@ const ONE_PIXEL_MAX_BYTES = 64 * 1024;
 
 /** The 1×1 pixels among the pictures the Fallbacks of the body name: junk, never published in place of an unread Choice.
  *  Only the main part. */
-const findPixelFallbacks = async (pkg: OpcPackage, relationships: ReadonlyMap<string, Relationship>, body: XNode): Promise<Set<string>> => {
+const findPixelFallbacks = async (
+  pkg: OpcPackage,
+  relationships: ReadonlyMap<string, Relationship>,
+  body: XNode,
+): Promise<Set<string>> => {
   const pixelIds = new Set<string>();
   for (const relId of new Set(fallbackPictureRelIds(body))) {
     const relationship = internalImage(pkg, relationships, relId);
@@ -306,7 +365,11 @@ const findPixelFallbacks = async (pkg: OpcPackage, relationships: ReadonlyMap<st
 
 /** The picture each drawing of the document ends up with: Google's image for the drawings it matches (voie A), our SVG for the
  *  others. The export is asked only when a drawing was drawn, and never decides the document: any refusal leaves our SVG. */
-const swapGoogleDrawings = async (drawings: DrawingLedger, drawingSource: GoogleDrawingSource | undefined, store: DrawingImageStore): Promise<ImageRef[]> => {
+const swapGoogleDrawings = async (
+  drawings: DrawingLedger,
+  drawingSource: GoogleDrawingSource | undefined,
+  store: DrawingImageStore,
+): Promise<ImageRef[]> => {
   const kept = drawings.slots.map((slot): ImageRef => slot.picture);
   if (drawingSource === undefined) return kept;
   const found = await googlePictures(drawings.slots, drawingSource);
@@ -324,7 +387,11 @@ const swapGoogleDrawings = async (drawings: DrawingLedger, drawingSource: Google
     if (!store.images.has(picture.ref.sha256)) {
       if (store.bytes - refund + picture.bytes.byteLength > store.allowance) return;
       store.bytes += picture.bytes.byteLength;
-      store.images.set(picture.ref.sha256, { sha256: picture.ref.sha256, bytes: picture.bytes, mimeType: picture.ref.mimeType });
+      store.images.set(picture.ref.sha256, {
+        sha256: picture.ref.sha256,
+        bytes: picture.bytes,
+        mimeType: picture.ref.mimeType,
+      });
     }
     svgUses.set(svgSha, (svgUses.get(svgSha) ?? 1) - 1);
     if (refund > 0) {
@@ -353,15 +420,40 @@ const buildNotices = (found: {
     ...(found.stylesDefaulted ? [{ kind: "styles-defaulted" as const }] : []),
     ...(found.emptyFields > 0 ? [{ kind: "field-results-empty" as const, count: found.emptyFields }] : []),
   ];
-  notices.push(...unpublishedPartNotices({
-    chartsWithheld: found.objects.chartsWithheld(),
-    imagesMissing: found.imagesMissing,
-    hiddenShapes: found.hiddenShapes,
-    tablesWithheld: found.tablesWithheld,
-    trackedDeletions: found.storyRoots.reduce((sum, story) => sum + countTrackedDeletions(story.root), 0),
-  }));
+  notices.push(
+    ...unpublishedPartNotices({
+      chartsWithheld: found.objects.chartsWithheld(),
+      imagesMissing: found.imagesMissing,
+      hiddenShapes: found.hiddenShapes,
+      tablesWithheld: found.tablesWithheld,
+      trackedDeletions: found.storyRoots.reduce((sum, story) => sum + countTrackedDeletions(story.root), 0),
+    }),
+  );
   return notices;
 };
+
+/** The three counters the readers report into, as callbacks on `tally`. */
+const tallyReporters = (
+  tally: Tally,
+): { reportShapesNotDrawn: (count: number) => void; reportHiddenShape: () => void; reportEmptyField: () => void } => ({
+  reportShapesNotDrawn: (count) => {
+    tally.shapesNotDrawn += count;
+  },
+  reportHiddenShape: () => {
+    tally.hiddenShapes++;
+  },
+  reportEmptyField: () => {
+    tally.emptyFields++;
+  },
+});
+
+/** Each pending drawing ref replaced by the picture kept for its slot (`swapGoogleDrawings`); every other ref unchanged. */
+const withGooglePictures = (blocks: IRBlock[], kept: readonly ImageRef[]): IRBlock[] =>
+  mapImageRefs(blocks, (ref) =>
+    ref.sha256.startsWith(PENDING_DRAWING_REF)
+      ? (kept[Number(ref.sha256.slice(PENDING_DRAWING_REF.length))] ?? ref)
+      : ref,
+  );
 
 /** `onDamaged` names the format in the error the user sees — the Word file's
  *  or the Google Docs export's (27/09/2026): the
@@ -388,12 +480,7 @@ export const readDocx = async (
   const images = pictures(pkg, onDamaged, limits);
   const drawingStore = newDrawingImageStore(limits);
   const tally: Tally = { shapesNotDrawn: 0, hiddenShapes: 0, emptyFields: 0 };
-  const reportShapesNotDrawn = (count: number): void => {
-    tally.shapesNotDrawn += count;
-  };
-  const reportHiddenShape = (): void => {
-    tally.hiddenShapes++;
-  };
+  const { reportShapesNotDrawn, reportHiddenShape, reportEmptyField } = tallyReporters(tally);
   // The drawings we drew, each a pending ref until Google's export has been
   // asked (D2 voie A, `docx-reader/google-drawings.ts`).
   const drawings = newDrawingLedger();
@@ -405,51 +492,56 @@ export const readDocx = async (
   const pixelIds = await findPixelFallbacks(pkg, relationships, body);
   const textBoxBlocks = new Set<IRBlock>();
   const page = largestPage(body);
-  const bodyBlocks = readBlocks(body, {
-    textBoxBlocks,
-    reportEmptyField: () => {
-      tally.emptyFields++;
-    },
-    page,
-    isPixelImage: (relId) => pixelIds.has(relId),
-    rels: relationships,
+  // What the body and the notes are read with alike.
+  const shared = {
     styles,
     numbering,
-    image: images.lookup(relationships),
+    noteCall,
+    page,
+    anchors,
     drawingImage: drawingStore.register,
     reportShapesNotDrawn,
     reportHiddenShape,
     drawings,
     objects,
-    noteCall,
-    fields: [],
-    anchors,
     limits,
     labels,
+  };
+  const bodyBlocks = readBlocks(body, {
+    ...shared,
+    textBoxBlocks,
+    reportEmptyField,
+    isPixelImage: (relId) => pixelIds.has(relId),
+    rels: relationships,
+    image: images.lookup(relationships),
+    fields: [],
   });
   // A one-row table of side-by-side prose becomes columns: on the body's own blocks only (never a note, a cell, a text box).
   const blocks = layoutTablesToColumns(bodyBlocks, textBoxBlocks);
-  blocks.push(
-    ...noteBlocks(
-      noteStories,
-      called,
-      { styles, numbering, noteCall, page, anchors, drawingImage: drawingStore.register, reportShapesNotDrawn, reportHiddenShape, drawings, objects, limits, labels },
-      images.lookup,
-    ),
-  );
+  blocks.push(...noteBlocks(noteStories, called, shared, images.lookup));
   // The words of every SmartArt, in one collapsed block (milestone 0 of the
   // diagram text: they were lost before), after the notes were read.
   blocks.push(...objects.gathered());
   const kept = await swapGoogleDrawings(drawings, drawingSource, drawingStore);
-  const drawn = mapImageRefs(dropDeadAnchorLinks(blocks, anchors.placed), (ref) =>
-    ref.sha256.startsWith(PENDING_DRAWING_REF) ? (kept[Number(ref.sha256.slice(PENDING_DRAWING_REF.length))] ?? ref) : ref,
-  );
+  const drawn = withGooglePictures(dropDeadAnchorLinks(blocks, anchors.placed), kept);
   const resolved = await images.resolve(drawn);
   // A table wider than MAX_TABLE_COLS or longer than MAX_TABLE_ROWS is not published, and said (one notice for the document).
-  const { blocks: published, withheld: tablesWithheld } = withholdOversizedTables(columnsBackToTables(resolved.blocks), undefined, limits);
+  const { blocks: published, withheld: tablesWithheld } = withholdOversizedTables(
+    columnsBackToTables(resolved.blocks),
+    undefined,
+    limits,
+  );
   const doc: IRDoc = { blocks: published };
   assertNoPendingRef(doc);
-  const notices = buildNotices({ stylesDefaulted, emptyFields: tally.emptyFields, objects, imagesMissing: resolved.dropped, hiddenShapes: tally.hiddenShapes, tablesWithheld, storyRoots });
+  const notices = buildNotices({
+    stylesDefaulted,
+    emptyFields: tally.emptyFields,
+    objects,
+    imagesMissing: resolved.dropped,
+    hiddenShapes: tally.hiddenShapes,
+    tablesWithheld,
+    storyRoots,
+  });
   return {
     doc,
     images: [...resolved.images, ...drawingStore.images.values()],
@@ -492,7 +584,21 @@ const NOTE_ELEMENT: Record<NotePart, string> = { footnotes: "w:footnote", endnot
 const noteBlocks = (
   stories: ReadonlyMap<NotePart, { root: XNode; rels: ReadonlyMap<string, Relationship> }>,
   called: readonly { part: NotePart; id: string }[],
-  shared: Pick<ReadContext, "styles" | "numbering" | "page" | "noteCall" | "anchors" | "drawingImage" | "reportShapesNotDrawn" | "reportHiddenShape" | "drawings" | "objects" | "limits" | "labels">,
+  shared: Pick<
+    ReadContext,
+    | "styles"
+    | "numbering"
+    | "page"
+    | "noteCall"
+    | "anchors"
+    | "drawingImage"
+    | "reportShapesNotDrawn"
+    | "reportHiddenShape"
+    | "drawings"
+    | "objects"
+    | "limits"
+    | "labels"
+  >,
   imageLookup: (relationships: ReadonlyMap<string, Relationship>) => ImageLookup,
 ): IRBlock[] => {
   if (called.length === 0) return [];
@@ -529,6 +635,10 @@ const withoutLeadingSpace = (blocks: IRBlock[]): IRBlock[] => {
   const head = first.inlines[headIndex];
   if (!head || head.image) return blocks;
   const text = head.text.replace(/^\s+/, "");
-  const inlines = [...first.inlines.slice(0, headIndex), ...(text.length > 0 ? [{ ...head, text }] : []), ...first.inlines.slice(headIndex + 1)];
+  const inlines = [
+    ...first.inlines.slice(0, headIndex),
+    ...(text.length > 0 ? [{ ...head, text }] : []),
+    ...first.inlines.slice(headIndex + 1),
+  ];
   return [{ ...first, inlines }, ...rest];
 };

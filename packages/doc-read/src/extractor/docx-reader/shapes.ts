@@ -46,8 +46,26 @@ import {
   STRAIGHT_CONNECTORS,
   type SlideSvgOmission,
 } from "../slide-svg";
-import { connectorBody, groupTurnedOf, guidesOf, isNotLabel, arrowAt, presetOf, shapeBase } from "../pptx-reader/shape-parts";
-import { attributeOf, findChild, findChildren, findDrawingFrame, findGraphicData, childNodesOf, qualifiedNameOf, textContentOf, type XNode } from "../ooxml/xml";
+import {
+  connectorBody,
+  groupTurnedOf,
+  guidesOf,
+  isNotLabel,
+  arrowAt,
+  presetOf,
+  shapeBase,
+} from "../pptx-reader/shape-parts";
+import {
+  attributeOf,
+  findChild,
+  findChildren,
+  findDrawingFrame,
+  findGraphicData,
+  childNodesOf,
+  qualifiedNameOf,
+  textContentOf,
+  type XNode,
+} from "../ooxml/xml";
 
 /** `wps:spPr`'s fill — DIRECT only (decided in this file's header): no
  *  `wps:style` reference is read, so a shape with no `a:noFill`/`a:solidFill`
@@ -227,7 +245,10 @@ const hasNonTextGraphics = (shape: PptxShape): boolean => {
   }
   if (shape.kind === "connector") {
     const geometry = shape.geometry ?? "";
-    return shape.visibleLine && (STRAIGHT_CONNECTORS.has(geometry) || (BENT_CONNECTORS.has(geometry) && shape.path !== undefined));
+    return (
+      shape.visibleLine &&
+      (STRAIGHT_CONNECTORS.has(geometry) || (BENT_CONNECTORS.has(geometry) && shape.path !== undefined))
+    );
   }
   return false;
 };
@@ -251,7 +272,10 @@ const shapesNotDrawnCount = (omitted: Partial<Record<SlideSvgOmission, number>>)
 
 /** Registers a self-described image's bytes and answers its reference, or
  *  `undefined` when the drawings' byte allowance is spent. */
-export type DrawingImageRegistrar = (bytes: Uint8Array, mimeType: string) => { sha256: string; mimeType: string } | undefined;
+export type DrawingImageRegistrar = (
+  bytes: Uint8Array,
+  mimeType: string,
+) => { sha256: string; mimeType: string } | undefined;
 
 const SVG_MIME = "image/svg+xml";
 
@@ -269,7 +293,11 @@ export interface DrawnShapes {
 
 const NOTHING_DRAWN: DrawnShapes = { blocks: [], shapesNotDrawn: 0 };
 
-export const drawnShapeBlocks = (drawing: XNode, register: DrawingImageRegistrar, limits?: ReaderLimits): DrawnShapes => {
+export const drawnShapeBlocks = (
+  drawing: XNode,
+  register: DrawingImageRegistrar,
+  limits?: ReaderLimits,
+): DrawnShapes => {
   const parsed = readDrawingShapes(drawing);
   if (!parsed) return NOTHING_DRAWN;
   const { shapes, canvas, unwalked } = parsed;
@@ -280,7 +308,8 @@ export const drawnShapeBlocks = (drawing: XNode, register: DrawingImageRegistrar
   if (shapes.length === 0 || !shapes.some(hasNonTextGraphics)) return { blocks: [], shapesNotDrawn: unwalked };
   // The pptx element cap, reused (starting value to calibrate,
   // `lib/reader-limits.ts`): a drawing past it is not drawn at all.
-  if (shapes.length > (limits?.slideElements ?? NO_CAP)) return { blocks: [], shapesNotDrawn: shapes.length + unwalked };
+  if (shapes.length > (limits?.slideElements ?? NO_CAP))
+    return { blocks: [], shapesNotDrawn: shapes.length + unwalked };
   const { svg, omitted } = renderSlideSvg(shapes, canvas);
   const ref = register(new TextEncoder().encode(svg), SVG_MIME);
   // The drawings' byte allowance spent (counted by the registrar): the
@@ -304,7 +333,12 @@ export interface DrawingDiagram {
 
 /** One `wps:wsp` of a drawing added to its diagram: a connector's line, a text box's box, or any other shape as an obstacle.
  *  `origin`: the top-left corner of the drawing's space, when a group gave one. */
-const addDiagramShape = (found: DrawingDiagram, node: XNode, levels: readonly GroupLevel[], origin: { x: number; y: number } | undefined): void => {
+const addDiagramShape = (
+  found: DrawingDiagram,
+  node: XNode,
+  levels: readonly GroupLevel[],
+  origin: { x: number; y: number } | undefined,
+): void => {
   const spPr = findChild(node, "wps:spPr");
   const shapeFrame = frameOf(findChild(spPr ?? {}, "a:xfrm"));
   if (shapeFrame === undefined) return;
@@ -342,7 +376,11 @@ export const readDrawingDiagram = (drawing: XNode, limits?: ReaderLimits): Drawi
   const graphicData = frame ? findGraphicData(frame) : undefined;
   if (!graphicData) return undefined;
   const found: DrawingDiagram = { texts: new Map(), obstacles: [], connectors: [] };
-  const walk = (nodes: readonly XNode[], levels: readonly GroupLevel[], origin: { x: number; y: number } | undefined): void => {
+  const walk = (
+    nodes: readonly XNode[],
+    levels: readonly GroupLevel[],
+    origin: { x: number; y: number } | undefined,
+  ): void => {
     for (const node of nodes) {
       switch (qualifiedNameOf(node)) {
         case "wpg:wgp":
@@ -350,7 +388,11 @@ export const readDrawingDiagram = (drawing: XNode, limits?: ReaderLimits): Drawi
           const grpSpPr = findChild(node, "wpg:grpSpPr");
           const level = groupLevel(grpSpPr);
           const groupFrame = frameOf(findChild(grpSpPr ?? {}, "a:xfrm"));
-          walk(childNodesOf(node), level === undefined ? levels : [...levels, level], origin ?? (groupFrame === undefined ? undefined : { x: groupFrame.x, y: groupFrame.y }));
+          walk(
+            childNodesOf(node),
+            level === undefined ? levels : [...levels, level],
+            origin ?? (groupFrame === undefined ? undefined : { x: groupFrame.x, y: groupFrame.y }),
+          );
           break;
         }
         case "wps:wsp":
@@ -363,6 +405,7 @@ export const readDrawingDiagram = (drawing: XNode, limits?: ReaderLimits): Drawi
   };
   walk(childNodesOf(graphicData), [], undefined);
   // One drawing past the element cap gives no diagram: its text boxes stay in today's order.
-  if (found.texts.size + found.obstacles.length + found.connectors.length > (limits?.slideElements ?? NO_CAP)) return undefined;
+  if (found.texts.size + found.obstacles.length + found.connectors.length > (limits?.slideElements ?? NO_CAP))
+    return undefined;
   return found;
 };
