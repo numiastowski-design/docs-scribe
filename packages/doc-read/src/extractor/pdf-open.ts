@@ -101,11 +101,10 @@ export const openPdfSource = async (
  *  counted by `readPdfSource`. A page whose glyphs could not be rebuilt (`buildGlyphFragments` refuses LOUDLY an operator it
  *  does not cover rather than guess) reads as `[]` here and keeps its reason in `PdfSourcePage.glyphsUnavailable`.
  *
- *  BIAS, chosen and written (06/10/2026, survey of disguised failures, point 3): such a page has no table recognised
- *  and is published as flat text. No word is lost, only the grid; the page never fails the document. The reason is never
- *  logged nor shown (error messages are composed by us; the upstream text is read to classify, then dropped). The guard is the
- *  corpus oracle (`pdf-source.oracle.test.ts`), which reads `glyphsUnavailable`. Measured 06/10/2026 over the 79 PDFs of
- *  fixtures/pdf and corpus-local: 0 page throws. */
+ *  BIAS, chosen and written (06/10/2026, survey of disguised failures, point 3; corrected 16/11/2026): the page never fails
+ *  the document, but since pdf.js was removed (1/11/2026) it has NO text at all — its words are not published, only its
+ *  pictures. The loss is said: `pdf.ts` turns the page's closed reason into a `pdf-text-unread` notice; the error's own text
+ *  is read to classify, then dropped. Measured 06/10/2026 over the 79 PDFs of fixtures/pdf and corpus-local: 0 page throws. */
 export const glyphReader =
   (source: PdfSource) =>
   (pageIndex: number): GlyphFragment[] => {

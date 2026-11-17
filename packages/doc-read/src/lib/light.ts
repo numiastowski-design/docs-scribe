@@ -32,7 +32,7 @@ export { PUBLISHED_SCHEME } from "doc-ir/lib/link-schemes";
 export { DOCX_MIME, EXT_BY_MIME, GOOGLE_DOC, GOOGLE_FOLDER, GOOGLE_SHEET, GOOGLE_SLIDES, PPTX_MIME, SOURCE_TYPE_BY_EXTENSION, XLSX_MIME, isGoogleNative, listedMimeType } from "./mime-types";
 export { ReaderError } from "doc-ir/lib/reader-error";
 export type { ReaderCountDetail } from "doc-ir/lib/reader-error";
-export { MAX_PAYLOAD_BYTES, cutNoticeName } from "doc-ir/lib/reader-limits";
+export { MAX_NOTICE_PAGE_RANGES, MAX_PAYLOAD_BYTES, cutNoticeName } from "doc-ir/lib/reader-limits";
 export type { ReaderLimits } from "doc-ir/lib/reader-limits";
 export type { DocumentConservation, DocumentNotice, DocumentStructure, MissingWordCause, PageLanguage, PdfToolLabel, PictureRefusal, StructureCounts } from "doc-ir/lib/reader-types";
 export type { SlideImage, SlideImagePort, SlidePage } from "./slide-image-port";

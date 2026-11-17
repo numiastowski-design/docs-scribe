@@ -106,6 +106,12 @@ export type DocumentNotice =
    *  rest counted in `more`.
    *  One entry per document, `slow + unreadable` >= 1. */
   | { kind: "pdf-image-unread"; slow: number; unreadable: number; places: readonly { page: number; id: string; why: PictureRefusal }[]; more: number }
+  /** `extractor/pdf.ts` (16/11/2026): pages whose glyphs could not be built, published WITHOUT their text (their pictures
+   *  alone, or empty) — or, for the reason `font` (17/11/2026), pages missing the words of one font only. One entry per `reason`, CLASSIFIED from the error and the error dropped (`PdfTextUnreadReason`).
+   *  `pages`: counted from 1, inclusive, folded into ranges in page order, at most `MAX_NOTICE_PAGE_RANGES` of them;
+   *  `more` counts the pages the kept ranges leave out; `count` is every page of this reason. Pages the AI reading
+   *  replaced are not in it. */
+  | { kind: "pdf-text-unread"; reason: PdfTextUnreadReason; count: number; pages: readonly { from: number; to: number }[]; more: number }
   /** `orchestrator/doc-processor.ts`: the lost-words check could not RUN (never a deliberate abstention) — `source`: the
    *  document could not be read again or the check threw; `page`: the published page could not be read back or compared.
    *  The page is published all the same. At most one entry per part. */
@@ -132,6 +138,18 @@ export type DocumentNotice =
  *  `ambiguous` and `absent` are decided by the CALLER (`pdf-source.ts`, which alone knows the scopes a name was
  *  painted in and what the resources declare); everything else is read from the dictionary here. */
 export type PictureRefusal = "codec" | "filters" | "mask" | "shape" | "too-large" | "ambiguous" | "absent" | "bytes";
+
+/** Why a PDF page's text could not be read (`extractor/pdf-source.ts#textUnreadReasonOf` classifies the error, then drops it):
+ *  - `limit`: a bound of our reader bit (too many glyphs shown on the page, a budget of the object reader).
+ *  - `unsupported`: what the page does is one we refuse to guess — vertical writing, a text operator the glyph builder does
+ *    not cover — named by a closed tag at the throw site, never by reading a message.
+ *  - `damaged`: the file is broken where the page's text is read (a refusal of our object reader, or of our own).
+ *  - `unexpected`: anything else. The one worth looking at.
+ *  - `font` (17/11/2026): the page's glyphs WERE built, but at least one glyph it shows is in a font we could not read
+ *    (an unexpected error reading the font's tables, or an Adobe predefined CMap we do not decode). No stand-in table is
+ *    used: the page keeps the text of its other fonts, only that font's words are missing. A page whose whole text is
+ *    already unread keeps its own reason. */
+export type PdfTextUnreadReason = "limit" | "unsupported" | "damaged" | "unexpected" | "font";
 
 /** The source element a missing word came from (MIKSUDOC « Spécification technique » T11,
  *  lot C addendum, 29/09/2026) — recorded by the independent reader

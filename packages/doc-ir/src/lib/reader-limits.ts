@@ -56,6 +56,11 @@ export const MAX_NOTICE_SHEET_NAMES = 5;
  *  (`more`). 03/11/2026: a count with nowhere to look is not a report. */
 export const MAX_NOTICE_IMAGE_PLACES = MAX_NOTICE_SHEET_NAMES;
 
+/** How many PAGE RANGES a `pdf-text-unread` notice names (`lib/reader-types.ts#DocumentNotice`): the same display bound as
+ *  the lost picture places, and for the same reason; the pages left out are only counted (`more`). Starting value to
+ *  calibrate (16/11/2026). A PDF of 2 000 pages that all fail holds in one range. */
+export const MAX_NOTICE_PAGE_RANGES = MAX_NOTICE_IMAGE_PLACES;
+
 /** A sheet name is client text: a notice keeps at most this many characters
  *  of it (then « … »). The dev log's missing words are cut by the same `cutNoticeName`, at the same value as
  *  `pipeline/declared-format-conservation.ts#MISSING_WORD_SHOWN_MAX_CHARS` (held equal by `core/reader-limits.test.ts`;

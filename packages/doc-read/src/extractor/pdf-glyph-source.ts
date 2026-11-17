@@ -43,7 +43,8 @@ export interface OurGlyph {
    *    `/Encoding` is an Adobe PREDEFINED CMap, which only the resources embedded in pdf.js decoded.
    *    This is not a verdict on the file, it is an ignorance on our side. `pdf-glyph-swap.ts` (deleted, see git history) used to leave
    *    pdf.js's glyph intact then; pdf.js being removed (01/11/2026), the glyph has neither text nor advance. Without this
-   *    third value, 1 050 words of a real safedocs file fell to 72. */
+   *    third value, 1 050 words of a real safedocs file fell to 72. A font whose tables threw (`stateOf`) reads the same.
+   *    Since 17/11/2026 a page showing such a glyph carries a `pdf-text-unread` notice of reason `font`. */
   readonly read: "ours" | "default-font" | "not-ours";
 }
 
@@ -185,7 +186,9 @@ export function stateOf(doc: PdfObjectsDocument, declared: PdfDict | undefined, 
   } catch (error) {
     // A refusal of the document (budget exhausted, unreadable stream) stays a refusal: we do not turn it into an abstention.
     if (error instanceof PdfObjectsRefusal) throw error;
-    // A font we cannot read does not fail the page: it abstains.
+    // A font we cannot read does not fail the page, and gets NO stand-in table (17/11/2026): its glyphs carry
+    // `read: "not-ours"`, neither text nor advance, and the page says its words are missing when the filter of the published text would have kept them
+    // (`glyph-positions.ts#unreadFontKept`).
     state = UNKNOWN;
   }
   memo.fonts.set(font, state);

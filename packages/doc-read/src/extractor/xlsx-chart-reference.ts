@@ -21,10 +21,10 @@ export interface ChartCellPoint {
   formatCode?: string | undefined;
 }
 
-/** The points of an address, in index order, produced as asked. `extent`, when given, is how many cells the reference can yield, known
- *  without reading one: its length up to its last cell that gives a point (the length of the cache Excel would write; 0 when none does). */
+/** The points of an address, in index order, produced as asked. `extent` is how many cells the reference can yield, known without reading
+ *  one: the length of our dense array of its points, from its first cell to its last cell that gives a point (0 when none does). */
 export interface ChartPoints extends Iterable<ChartCellPoint> {
-  extent?: number;
+  readonly extent: number;
 }
 
 /** The points of an address, or `undefined` for an address outside the grammar or on another sheet, which the chart reader answers by keeping
@@ -142,7 +142,7 @@ export const sheetChartResolver = (sheetName: string, grid: ChartGrid): ChartRes
       yield across ? pointAt(range.firstRow, place, place - first) : pointAt(place, range.firstColumn, place - first);
     }
   }
-  /** The range's length up to its last cell that gives a point (0: none), from the lines alone: the length of the cache Excel would write. */
+  /** The range's length up to its last cell that gives a point (0: none), from the lines alone: our dense length for that reference. */
   const extentOf = (range: ChartRange): number => {
     const { places, first, last } = lineOf(range);
     const end = lowerBound(places, last + 1);

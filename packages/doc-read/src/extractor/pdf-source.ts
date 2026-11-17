@@ -11,10 +11,10 @@
  *  `extractor/pdf.ts`, the page stages and the layout helpers read its TYPES. */
 
 import { ReaderError } from "doc-ir/lib/reader-error";
-import type { PictureRefusal } from "doc-ir/lib/reader-types";
+import type { PdfTextUnreadReason, PictureRefusal } from "doc-ir/lib/reader-types";
 import { pictureRefusalOf } from "./pdf-image-refusal";
 import { stencilImageObjectOf } from "./pdf-stencil-images";
-import { PdfObjectsRefusal } from "./pdf-objects/refusal";
+import { PdfObjectsRefusal, type PdfObjectsRefusalReason } from "./pdf-objects/refusal";
 import { count, type ExtractionCost } from "./extraction-cost";
 import type { FontWeight } from "./font-weight";
 import { readImageObject, readImageRef, type PdfImageData } from "./pdf-images";
@@ -24,7 +24,7 @@ import { documentCacheOf } from "./document-cache";
 import { flateImageObjectOf } from "./pdf-flate-images";
 import { jpegImageObjectOf } from "./pdf-jpeg-images";
 import { ourOpsOfPage } from "./pdf-ops-ours";
-import { filteredGlyphs, INVISIBLE_TEXT_MODES, readGlyphs, type FontScaleOf, type GlyphFragment, type HidePolicy, type SymbolFontOf } from "./glyph-positions";
+import { filteredGlyphs, GlyphBuilderAbstention, INVISIBLE_TEXT_MODES, readGlyphs, unreadFontKept, type FontScaleOf, type GlyphFragment, type HidePolicy, type SymbolFontOf } from "./glyph-positions";
 import { runsOfGlyphs } from "./glyph-runs";
 import { countShownGlyphs, dropsModeHidden, MAX_FILTERED_GLYPHS } from "./pdf-hidden-text";
 import { hasReadableText, linesFromItems } from "./pdf-lines";
@@ -147,33 +147,35 @@ export interface PdfSourcePage {
    *  (and when the page's operators were not asked for, so nothing was looked at). Beside `imageFailure`, which says
    *  only that it failed: a count with nowhere to look is not a report (03/11/2026). */
   imageRefusal: (name: string) => PictureRefusal | undefined;
-  /** Vide quand `wantGlyphs` n'a pas retenu la page. Voir l'en-tête : c'est un
-   *  choix de coût, pas une absence de données. Vide AUSSI quand la
-   *  reconstruction a échoué — `glyphsUnavailable` dit alors pourquoi. */
+  /** Empty when `wantGlyphs` did not keep the page (a choice of cost, not an absence of data: see the header). Empty
+   *  ALSO when the rebuild failed — `glyphsUnavailable` then says why. */
   glyphs: GlyphFragment[];
   /**
    * Why the glyphs of THIS page are missing, when they are missing for a
-   * reason — absent otherwise.
+   * reason — absent otherwise. A word of a closed list (`textUnreadReasonOf`), never the error's text.
    *
-   * ⚠️ **THE ORACLE FOUND THIS CASE IN TEN SECONDS** (14/09/2026).
    * `buildGlyphFragments` throws LOUDLY on a text operator it does not cover,
    * rather than returning made-up coordinates — the right decision. Letting it
-   * propagate would fail the WHOLE document for one page, where the page
-   * should fall back to flat text.
+   * propagate would fail the WHOLE document for one page.
    *
    * The boundary therefore degrades page by page — but WRITES it instead of
-   * swallowing it. The product passes `wantGlyphs` too and `pdf-open.ts#glyphReader`
-   * reads `glyphs`, so this is the only place a lost page is recorded: the reason is
-   * never logged nor shown in production (provenance rule), but a page that lost its
-   * glyphs can be told from a page that has none.
+   * swallowing it. Since pdf.js was removed (1/11/2026) such a page has NO text at
+   * all: no flat text to fall back on, its words are not published. `pdf.ts`
+   * turns this reason into a `pdf-text-unread` notice (16/11/2026), so the loss
+   * is said to the person instead of looking like a page without text.
    *
    * MEASURED ON THE CORPUS: this used to say "one page throws, `05d` p0". It
-   * was 68 pages of 18 PDFs, 19 of them with a grid published as flat text.
-   * Since 22/09/2026 no French or English page of the corpus throws
-   * (`pdf-source.oracle.test.ts`); what is left is a named abstention on an
-   * operator the builder does not cover, or on vertical writing.
+   * was 68 pages of 18 PDFs. Since 22/09/2026 no French or English page of the
+   * corpus throws (measured by an oracle test removed with pdf.js); what is left
+   * is a named abstention on an operator the builder does not cover, or on
+   * vertical writing.
    */
-  glyphsUnavailable?: string;
+  glyphsUnavailable?: PdfTextUnreadReason;
+  /** Set when the page's glyphs WERE built and at least one glyph in a font we could not read (`pdf-glyph-source.ts`,
+   *  `OurGlyph.read === "not-ours"`) would have been PUBLISHED, its font readable: the filter of the published text decides
+   *  (`glyph-positions.ts#unreadFontKept`), so an invisible one counts for nothing. That font's words are missing, the rest is read.
+   *  `pdf.ts` turns it into a `pdf-text-unread` notice of reason `font` (17/11/2026). Never set beside `glyphsUnavailable`. */
+  fontUnread?: true;
   /**
    * The marked-content identifiers this page's STRUCTURE TREE holds, in the
    * tree's reading order corrected by `hoistAgainstTree` where the content
@@ -514,7 +516,9 @@ interface PageText {
   /** The page's glyphs. Released after the second pass unless the caller asked for them. */
   glyphs: GlyphFragment[];
   /** Why building the glyphs failed, when it did (`PdfSourcePage.glyphsUnavailable`). */
-  glyphsUnavailable?: string;
+  glyphsUnavailable?: PdfTextUnreadReason;
+  /** A glyph in a font we could not read would have been published (`PdfSourcePage.fontUnread`). */
+  fontUnread?: true;
   /** The text runs of the page, built from its glyphs. */
   runs: PdfTextRun[];
   /** The second reading of the page's text (`pdf-reference-ours.ts`), hidden text left out. */
@@ -763,33 +767,98 @@ export function readPageText(ctx: ReadContext, pageIndex: number): PageText {
 
   let hide: HidePolicy | undefined;
   let glyphs: GlyphFragment[] = [];
-  let glyphsUnavailable: string | undefined;
+  let glyphsUnavailable: PdfTextUnreadReason | undefined;
+  // A glyph of a font we could not read, which the filter of the published text would have KEPT (`unreadFontKept`).
+  // Only computed when the glyphs were built: a page whose whole text is unread keeps that reason.
+  let fontUnread = false;
   try {
-    ({ glyphs, hide } = glyphsOfOps(ops, ctx, fontScaleOf, symbolFontOf));
+    ({ glyphs, hide, fontUnread } = glyphsOfOps(ops, ctx, fontScaleOf, symbolFontOf));
   } catch (error) {
+    // NOT narrowed (16/11/2026): the page is published without its text rather than failing the document, and the loss
+    // is SAID — the error is classified into a closed word, then dropped (a native error can carry what the file chose).
     glyphs = [];
-    // The reason is composed by us: a `ReaderError` (ours, or `PdfObjectsRefusal`, whose message is built from its reason alone)
-    // keeps its message; the text of anything else is read to classify and dropped — a native error can carry what the file chose.
-    glyphsUnavailable = error instanceof ReaderError ? error.message : "glyph reconstruction failed";
+    glyphsUnavailable = textUnreadReasonOf(error);
   }
   const runs = glyphsUnavailable === undefined ? runsOfGlyphs(glyphs, { pageObjId, view: [x0, y0, x1, y1], normalize: normalizeUnicode, sameFont }) : [];
   resolveRunWeights(ourFont, runs);
   const reference = glyphsUnavailable === undefined ? referenceOfGlyphs(glyphs, pageObjId) : [];
   // What the caller will never ask for is not kept: the runs and the reference are built, and the second pass reads `ops` and `glyphs` only for a
   // page its predicates select. Held for every page until the end, they were a few hundred megabytes on a long text document.
-  return { index: pageIndex, ops: ctx.keepOps ? ops : [], fonts, ...(hide !== undefined ? { hide } : {}), glyphs: ctx.keepGlyphs ? glyphs : [], ...(glyphsUnavailable !== undefined ? { glyphsUnavailable } : {}), runs, reference };
+  return {
+    index: pageIndex,
+    ops: ctx.keepOps ? ops : [],
+    fonts,
+    ...(hide !== undefined ? { hide } : {}),
+    glyphs: ctx.keepGlyphs ? glyphs : [],
+    ...(glyphsUnavailable !== undefined ? { glyphsUnavailable } : {}),
+    ...(fontUnread ? { fontUnread: true as const } : {}),
+    runs,
+    reference,
+  };
+}
+
+/** The bounds of our object reader: a refusal for one of them is a `limit` that bit, any other refusal a damaged file.
+ *  A `Record` so a reason added to `PdfObjectsRefusalReason` does not compile until it is classified here. */
+const REFUSAL_IS_BOUND: Record<PdfObjectsRefusalReason, boolean> = {
+  syntax: false,
+  truncated: false,
+  "nesting-too-deep": true,
+  "token-too-long": true,
+  "string-too-long": true,
+  "stream-length": false,
+  "stream-end": false,
+  "length-unresolved": false,
+  "startxref-missing": false,
+  "xref-offset": false,
+  "xref-syntax": false,
+  "xref-chain": false,
+  "xref-too-large": true,
+  "filter-unsupported": false,
+  predictor: false,
+  "stream-decode": false,
+  "object-stream": false,
+  "xref-stream": false,
+  "xref-stale": false,
+  "ref-hops": true,
+  "page-tree": false,
+  "page-box": false,
+  "content-syntax": false,
+  "content-operands": false,
+  "content-too-long": true,
+  "inline-image": false,
+  encrypted: false,
+  "to-unicode": false,
+  "value-too-large": true,
+  "document-too-large": true,
+  "glyphs-too-many": true,
+  "forms-too-many": true,
+  "font-tables-too-many": true,
+  "page-missing": false,
+};
+
+/** Why a page's glyphs could not be built, CLASSIFIED from the error by its class, code or closed tag — never by its
+ *  message, which is dropped. An abstention of the glyph builder is `unsupported`; a bound of ours that bit is `limit`
+ *  (`FILE_UNSAFE`, or a bound of the object reader); any other refusal of ours is `damaged`; anything else `unexpected`. */
+export function textUnreadReasonOf(error: unknown): PdfTextUnreadReason {
+  if (error instanceof GlyphBuilderAbstention) return "unsupported";
+  if (error instanceof PdfObjectsRefusal) return REFUSAL_IS_BOUND[error.reason] ? "limit" : "damaged";
+  if (error instanceof ReaderError) {
+    if (error.code === "FILE_UNSAFE") return "limit";
+    if (error.code === "EXTRACT_FAILED") return "damaged";
+  }
+  return "unexpected";
 }
 
 /** The glyphs of a page's operators, and the hide policy when the page holds hidden-text candidates. The operators are walked ONCE: the policy is
  *  decided from the glyphs read, then the same glyphs are filtered by it (a second walk doubled the cost of every page of an OCR'd scan). */
-function glyphsOfOps(ops: PdfOp[], ctx: ReadContext, fontScaleOf: FontScaleOf, symbolFontOf: SymbolFontOf): { glyphs: GlyphFragment[]; hide: HidePolicy | undefined } {
+function glyphsOfOps(ops: PdfOp[], ctx: ReadContext, fontScaleOf: FontScaleOf, symbolFontOf: SymbolFontOf): { glyphs: GlyphFragment[]; hide: HidePolicy | undefined; fontUnread: boolean } {
   // Counted before building: a hostile page must not allocate its glyph objects just to be refused.
   if (countShownGlyphs(ops) > MAX_FILTERED_GLYPHS) throw new ReaderError("FILE_UNSAFE", "the page has too many shown glyphs to be read");
   const { candidate, namesLayer } = scanHiddenCandidates(ops);
   const isLayerVisible = candidate ? visibilityOf(ctx, namesLayer) : undefined;
   const all = readGlyphs(ops, isLayerVisible, fontScaleOf, symbolFontOf);
   const hide: HidePolicy | undefined = isLayerVisible === undefined ? undefined : { isLayerVisible, dropModeHidden: dropsModeHidden(all) };
-  return { glyphs: filteredGlyphs(all, hide), hide };
+  return { glyphs: filteredGlyphs(all, hide), hide, fontUnread: unreadFontKept(all, hide) };
 }
 
 /** The pictures of a page the caller asked for: those we decode, and the names painted (an unpainted name is not a failure). */
@@ -856,6 +925,7 @@ export function readPageSource(text: PageText, pageIndex: number, wants: PageWan
     imageRef: (name: string) => readImageRef(store, name),
     glyphs,
     ...(text.glyphsUnavailable !== undefined ? { glyphsUnavailable: text.glyphsUnavailable } : {}),
+    ...(text.fontUnread === true ? { fontUnread: true as const } : {}),
     ...(declaredOrder.length > 0 ? { declaredOrder: hoistAgainstTree(declaredOrder, runs) } : {}),
     ...(noteIds.size > 0 ? { noteIds } : {}),
     ...(reference !== undefined ? { reference } : {}),

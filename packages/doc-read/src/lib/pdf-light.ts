@@ -37,7 +37,7 @@ export type { LostTextAbstention, LostTextInsertion } from "../pipeline/lost-tex
 
 /** The document the reader hands back, and what it could not publish. */
 export type { IRBlock, IRDoc, IRTab, ImageRef, Inline, InlineMark, TableData } from "doc-ir/lib/ir";
-export type { DocumentNotice, PageLanguage, PictureRefusal } from "doc-ir/lib/reader-types";
+export type { DocumentNotice, PageLanguage, PdfTextUnreadReason, PictureRefusal } from "doc-ir/lib/reader-types";
 export { ReaderError } from "doc-ir/lib/reader-error";
 export type { ReaderCountDetail } from "doc-ir/lib/reader-error";
 export type { ReaderLimits } from "doc-ir/lib/reader-limits";

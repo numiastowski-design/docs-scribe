@@ -69,6 +69,9 @@ export type ChartDrawingType = "bar" | "stackBar" | "hBar" | "hStackBar" | "line
 export interface ChartDrawing {
   type: ChartDrawingType;
   values: (number | null)[][];
+  /** The category axis runs from its last category to its first (`c:orientation val="maxMin"`, ECMA-376 Part 1 §21.2.2.130): the DRAWING lists
+   *  the table's rows last first. `values` and the table keep the document's order. Absent: first to last. */
+  categoriesReversed?: true;
 }
 
 /** Tabular data extracted from a native chart or a sheet. */

@@ -36,10 +36,10 @@ export interface SheetCell {
   numeric: boolean;
 }
 
-/** The points of an address, in index order, produced as asked. `extent`, when given, is how many cells the reference can yield, known
- *  without producing one: its length up to its last cell that shows something (0 when none does). */
+/** The points of an address, in index order, produced as asked. `extent` is how many cells the reference can yield, known without producing
+ *  one: its length up to its last cell that shows something (0 when none does). */
 export interface SheetCells extends Iterable<SheetCell> {
-  extent?: number;
+  readonly extent: number;
 }
 
 /** The points of an address; `undefined`: an address the control does not read. */

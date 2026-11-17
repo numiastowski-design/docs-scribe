@@ -161,43 +161,37 @@ const upToBound = (found: Iterable<ChartCellPoint>, limits: ReaderLimits | undef
   return kept;
 };
 
-/** A reference of the chart, parsed: what the resolver answered, whether it names the series (`c:tx`), and how many cells it can yield. */
-interface PlannedReference { ref: XNode; found: ChartPoints; name: boolean; read?: readonly ChartCellPoint[] }
+/** A reference of the chart, parsed: what the resolver answered and whether it names the series (`c:tx`). */
+interface PlannedReference { ref: XNode; found: ChartPoints; name: boolean }
 
-/** How many cells a reference can yield (its `extent`; a resolver that cannot tell, a test's fixed answers, is read up to the bound to count). */
-const plannedOf = (ref: XNode, found: ChartPoints, name: boolean, limits: ReaderLimits | undefined): { planned: PlannedReference; cells: number } => {
-  if (name) return { planned: { ref, found, name }, cells: 1 };
-  if (found.extent !== undefined) return { planned: { ref, found, name }, cells: found.extent };
-  const read = upToBound(found, limits);
-  return { planned: { ref, found, name, read }, cells: read.length === 0 ? 0 : read[read.length - 1]!.index + 1 };
-};
-
-/** The sheet's points for the series references of a chart, or `undefined` when the chart keeps its cache: any reference of the chart carries a
+/** The sheet's points for the series references of a chart; `undefined` when the chart keeps its cache: any reference of the chart carries a
  *  point (the file wrote values), it holds literal data, it has more series than the bound (its cache then withholds it in `tableOf` exactly
- *  as before the sheet was read), there is no series reference to read, one reference is outside what the resolver reads (another sheet, an
- *  address outside the grammar, a multi-level category: a chart half from the sheet and half from nothing would draw a lie), or the references
- *  can yield more cells than the bounds allow. That last decision is made by ARITHMETIC on the parsed addresses, before any cell is read: one
- *  reference past the point bound (its extent, the length of the cache Excel would write, over MAX_CHART_POINTS), or all the references of the
- *  chart together over MAX_CHART_CELLS, a series name counting one cell (only its first point is read). Points held for one chart: at most
- *  MAX_CHART_CELLS, decided before the first cell is read.
- *  Chosen limit, written: a cache-less chart whose references span more than these bounds is not drawn from its sheet; it shows what its file
- *  wrote (its titles, an empty table), where the cache path would withhold a filled cache of the same size. */
-const sheetPointsOf = (root: XNode, resolver: ChartResolver, limits: ReaderLimits | undefined): SheetPoints | undefined => {
+ *  as before the sheet was read), there is no series reference to read, or one reference is outside what the resolver reads (another sheet, an
+ *  address outside the grammar, a multi-level category: a chart half from the sheet and half from nothing would draw a lie).
+ *  `"withheld"`: the references can yield more cells than the bounds allow, and the chart is withheld whole, like a cache of that size
+ *  (décision B; the caller says so in its notice). That decision is made by ARITHMETIC on the parsed addresses, before any cell is read: one
+ *  reference past the point bound (its extent, our dense length up to its last point, over MAX_CHART_POINTS), or all the references of the
+ *  chart together over MAX_CHART_CELLS: an address counted once however many series name it (it is read once), a series name one cell each
+ *  (only its first point is read). Points held for one chart: at most MAX_CHART_CELLS, decided before the first cell is read. */
+const sheetPointsOf = (root: XNode, resolver: ChartResolver, limits: ReaderLimits | undefined): SheetPoints | "withheld" | undefined => {
   if (REFERENCE_TAGS.some((tag) => findDescendants(root, tag).some((ref) => findDescendants(ref, "c:pt").length > 0))) return undefined;
   // Literal data (`c:numLit`, `c:strLit`) is values the file wrote, which this reader does not read: the chart keeps its cache whole.
   if (LITERAL_TAGS.some((tag) => findDescendants(root, tag).length > 0)) return undefined;
   const series = findDescendants(root, "c:ser");
   if (series.length > boundsOf(limits).series) return undefined;
   const plan = planOf(series, resolver, limits);
-  return plan === undefined ? undefined : pointsOfPlan(plan, limits);
+  return plan === undefined || plan === "withheld" ? plan : pointsOfPlan(plan, limits);
 };
 
 /** Every series reference parsed, and the cells they can yield counted against the bounds, before any cell is read (`sheetPointsOf`).
- *  `undefined`: a multi-level category, a refused address, or a bound passed. */
-const planOf = (series: readonly XNode[], resolver: ChartResolver, limits: ReaderLimits | undefined): PlannedReference[] | undefined => {
+ *  `undefined`: a multi-level category or a refused address (the chart keeps its cache); `"withheld"`: a bound passed. */
+const planOf = (series: readonly XNode[], resolver: ChartResolver, limits: ReaderLimits | undefined): PlannedReference[] | "withheld" | undefined => {
   const bounds = boundsOf(limits);
   // A parse memo by address text: an address repeated by several series (Google repeats its categories) is parsed and read once.
   const answers = new Map<string, ChartPoints | undefined>();
+  // The addresses already counted as ranges: read once (`pointsOfPlan`), so counted once. A series name is its own one-point copy: it counts
+  // one cell every time.
+  const counted = new Set<string>();
   const plan: PlannedReference[] = [];
   let cells = 0;
   for (const { ref, name } of series.flatMap(seriesReferences)) {
@@ -206,10 +200,13 @@ const planOf = (series: readonly XNode[], resolver: ChartResolver, limits: Reade
     if (!answers.has(address)) answers.set(address, resolver(address));
     const found = answers.get(address);
     if (found === undefined) return undefined;
-    const planned = plannedOf(ref, found, name, limits);
-    cells += planned.cells;
-    if ((!name && planned.cells > bounds.points) || cells > bounds.cells) return undefined;
-    plan.push(planned.planned);
+    if (name) cells += 1;
+    else if (!counted.has(address)) {
+      counted.add(address);
+      cells += found.extent;
+    }
+    if ((!name && found.extent > bounds.points) || cells > bounds.cells) return "withheld";
+    plan.push({ ref, found, name });
   }
   return plan;
 };
@@ -218,10 +215,10 @@ const planOf = (series: readonly XNode[], resolver: ChartResolver, limits: Reade
 const pointsOfPlan = (plan: readonly PlannedReference[], limits: ReaderLimits | undefined): SheetPoints | undefined => {
   const readOnce = new Map<ChartPoints, readonly ChartCellPoint[]>();
   const resolved = new Map<XNode, readonly ChartCellPoint[]>();
-  for (const { ref, found, name, read } of plan) {
+  for (const { ref, found, name } of plan) {
     if (name) resolved.set(ref, firstPoint(found));
     else {
-      if (!readOnce.has(found)) readOnce.set(found, read ?? upToBound(found, limits));
+      if (!readOnce.has(found)) readOnce.set(found, upToBound(found, limits));
       resolved.set(ref, readOnce.get(found)!);
     }
   }
@@ -408,6 +405,21 @@ const drawingOf = (type: ChartDrawingType | undefined, labelColumnCount: number,
   return { type, values: numbers.map((n) => kept.map((i) => n![i] ?? null)) };
 };
 
+/** Whether the category axis runs from its last category to its first: the `c:orientation` of the `c:scaling` of the plot area's first
+ *  `c:catAx` or `c:dateAx` says `maxMin` (ECMA-376 Part 1 §21.2.2.130, §21.2.3.30; absent: `minMax`). Google Sheets writes it on a horizontal
+ *  bar chart, so that the first row is the top bar. A value axis is not looked at: its direction moves no category. */
+const categoryAxisReversed = (root: XNode): boolean => {
+  const plotArea = findChild(findChild(root, "c:chart") ?? {}, "c:plotArea") ?? {};
+  const axis = findChild(plotArea, "c:catAx") ?? findChild(plotArea, "c:dateAx");
+  return attributeOf(findChild(findChild(axis ?? {}, "c:scaling") ?? {}, "c:orientation") ?? {}, "val") === "maxMin";
+};
+
+/** The drawing with the direction of its category axis. A pie and a donut have no axis: never reversed. */
+const withCategoryDirection = (drawing: ChartDrawing | undefined, root: XNode): ChartDrawing | undefined => {
+  if (drawing === undefined || drawing.type === "pie" || drawing.type === "donut" || !categoryAxisReversed(root)) return drawing;
+  return { ...drawing, categoriesReversed: true };
+};
+
 /** `"withheld"`: the chart HAS series but a bound keeps it out whole (décision B); `undefined`: it has none.
  *  `labelFromX`: the left column holds the X values of a scatter (no series writes categories), so the title of the X axis heads it. */
 const tableOf = (root: XNode, limits: ReaderLimits | undefined, sheet: SheetPoints | undefined): { data: TableData; labelColumns: number; labelFromX: boolean; drawing?: ChartDrawing } | "withheld" | undefined => {
@@ -494,7 +506,7 @@ const tableOf = (root: XNode, limits: ReaderLimits | undefined, sheet: SheetPoin
       keptIndices.push(i);
     }
   }
-  const drawing = drawingOf(drawingTypeOf(root), labelColumns.length, columns, keptIndices);
+  const drawing = withCategoryDirection(drawingOf(drawingTypeOf(root), labelColumns.length, columns, keptIndices), root);
   return {
     data: { headers: [...labelColumns.map(() => ""), ...columns.map((c) => c.name ?? "")], rows },
     labelColumns: labelColumns.length,
@@ -599,7 +611,9 @@ export const readChartOutcome = async (
 ): Promise<PptxChart | "withheld" | undefined> => {
   const root = await pkg.readXml(part);
   if (!root) return "withheld";
-  const table = tableOf(root, options.limits, options.resolver === undefined ? undefined : sheetPointsOf(root, options.resolver, options.limits));
+  const sheet = options.resolver === undefined ? undefined : sheetPointsOf(root, options.resolver, options.limits);
+  if (sheet === "withheld") return "withheld";
+  const table = tableOf(root, options.limits, sheet);
   if (table === undefined || table === "withheld") return table;
   const { data, titles } = withTitles(root, table, options.limits);
   // A caller that publishes no picture (docx, xlsx) never reads its bytes.

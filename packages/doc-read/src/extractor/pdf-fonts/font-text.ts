@@ -19,6 +19,7 @@ import { builtInType1Encoding } from "./type1-encoding";
 import { textOfUnicodeCode, unicodeCodeForm } from "./predefined-cmaps";
 import { chargeTableEntries, type TableBudget } from "./table-budget";
 import { readToUnicode, type ToUnicode } from "./to-unicode";
+import { PdfObjectsRefusal } from "../pdf-objects/refusal";
 
 /** What this layer needs of a document: two lookups and the bytes of a stream. */
 export interface FontReader {
@@ -82,9 +83,13 @@ function programEncodingOf(reader: FontReader, font: PdfDict): readonly string[]
   if (file?.kind !== "stream") return undefined;
   try {
     return builtInType1Encoding(reader.streamBytes(file));
-  } catch {
-    // A stream we cannot decode says nothing, and the abstention stands: never a guessed encoding.
-    return undefined;
+  } catch (error) {
+    // A stream OUR reader refuses to decode says nothing, and the abstention stands: never a guessed encoding.
+    // Anything else is a defect, and is not turned into the standard encoding, which can INVENT letters (16/11/2026,
+    // docs/CONCEPTION-AVIS-TEXTE-PDF.md, question 5): it leaves the font, whose caller drops its glyphs
+    // (`pdf-glyph-source.ts`, « A font we cannot read »). Losing words visibly rather than inventing them silently.
+    if (error instanceof PdfObjectsRefusal) return undefined;
+    throw error;
   }
 }
 
@@ -119,8 +124,11 @@ function toUnicodeOf(reader: FontReader, font: PdfDict, memo: FontTextMemo | und
   let table: ToUnicode | undefined;
   try {
     table = readToUnicode(reader.streamBytes(stream));
-  } catch {
-    // A CMap we refuse says nothing; the encoding may still answer.
+  } catch (error) {
+    // A CMap OUR reader refuses (`to-unicode`, an undecodable stream) says nothing; the encoding may still answer.
+    // Anything else is a defect and leaves the font, as `programEncodingOf` does (16/11/2026): the encoding's
+    // letters would be a guess for a font that declared its own text.
+    if (!(error instanceof PdfObjectsRefusal)) throw error;
     table = undefined;
   }
   // Charged when the table is made, once per OBJECT (the memo answers the others): a table is kept for the whole document.
