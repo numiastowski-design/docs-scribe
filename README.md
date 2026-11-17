@@ -10,6 +10,37 @@ uploaded files into Confluence pages. PDF is the other half, published as
 
 Published on npm as [`docs-scribe`](https://www.npmjs.com/package/docs-scribe): `npm i docs-scribe`.
 
+## Install
+
+```sh
+npm install docs-scribe
+```
+
+ES modules only, for Node.js 24 or later; the types ship with the package. From CommonJS,
+`require("docs-scribe")` loads the same ES module on these Node.js versions.
+
+## A complete example
+
+```ts
+// read.ts: node read.js report.docx
+import { readFileSync } from "node:fs";
+import { extractDocx } from "docs-scribe";
+import { ReaderError } from "docs-scribe/light";
+
+const path = process.argv[2];
+if (path === undefined) throw new Error("usage: node read.js <file.docx>");
+
+try {
+  const { doc, notices } = await extractDocx(new Uint8Array(readFileSync(path)));
+  console.log(`blocks: ${doc.blocks.length}`);
+  console.log(`notices: ${notices?.length ?? 0}`);
+} catch (error) {
+  if (!(error instanceof ReaderError)) throw error;
+  console.error(`refused: ${error.code}`);
+  process.exitCode = 1;
+}
+```
+
 ## Read a document
 
 ```js
@@ -127,11 +158,33 @@ that proves our runs really are joined, so the immunity is the rule and not an a
 His paper also names the failure that is ours rather than an attacker's: **omission**, content a human
 sees and the reader loses. That is what the conservation check above exists to measure.
 
+## API
+
+Four entries, two of them the minified twins of the others.
+
+- `docs-scribe` — the readers: `extractDocx`, `extractPptx`, `extractXlsx`, `extractGoogleDoc`,
+  `extractGoogleSheet`; the archive check `assertZipDeclaredSizesSafe`; the words of diagrams,
+  `diagramTextWords` and `undrawnDiagramWords`; and `detectLanguage`.
+- `docs-scribe/light` — loads no reader. The conservation check: `missingWordGroups`,
+  `conservationFromMissingWordGroups`, `pageWords`, `wordKeysOf`, `conservationKey`. Refusals and
+  ceilings: `ReaderError`, `isReadFailure`, `cutNoticeName`, `MAX_PAYLOAD_BYTES`. Formats:
+  `classifyMimeType`, `isSupportedKind`, `isWorkbookKind`, `isGoogleNative`, `isDeclaredFormatSource`,
+  `DOCX_MIME`, `PPTX_MIME`, `XLSX_MIME`, `GOOGLE_DOC`, `GOOGLE_SHEET`, `GOOGLE_SLIDES`. Structure
+  counts: `emptyCounts`, `addCounts`, `subtractCounts`, `isZeroCounts`. And the types of the
+  representation (`IRDoc`, `IRBlock`, `TableData`…).
+- `docs-scribe/min` and `docs-scribe/light/min` — the same code, minified.
+
+## Versioning
+
+The package follows [Semantic Versioning](https://semver.org): while it is `0.x`, a minor version
+may break the published surface, and a patch never does. Each release is described in
+`CHANGELOG.md`, shipped in the package.
+
 ## Licence
 
 AGPL-3.0-or-later: run a modified version as a network service and its source must be available to its
 users. Since 0.4.1 the code comes readable (`dist/index.js`), with the same code minified beside it
 (`docs-scribe/min`). This repository is that source — a snapshot of the packages the npm bundle is built from, taken
-from the development monorepo at version 0.4.2 (17 November 2026). The entry points are
+from the development monorepo at version 0.5.0 (17 November 2026). The entry points are
 `packages/doc-read/src/lib/docs.ts` and `packages/doc-read/src/lib/docs-light.ts`; the npm package ships
 the bundle built from them. Questions: <contact@miksumia.com>.

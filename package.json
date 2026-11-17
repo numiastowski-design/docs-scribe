@@ -1,6 +1,6 @@
 {
   "name": "docs-scribe",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "Reads Word, PowerPoint, Excel and Google exports into a structured representation, and checks that no word was lost on the way.",
   "keywords": [
     "docx",
@@ -21,25 +21,26 @@
     "email": "contact@miksumia.com"
   },
   "type": "module",
+  "sideEffects": false,
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "exports": {
     ".": {
       "types": "./dist/types/packages/doc-read/src/lib/docs.d.ts",
-      "import": "./dist/index.js"
+      "default": "./dist/index.js"
     },
     "./light": {
       "types": "./dist/types/packages/doc-read/src/lib/docs-light.d.ts",
-      "import": "./dist/light.js"
+      "default": "./dist/light.js"
     },
     "./min": {
       "types": "./dist/types/packages/doc-read/src/lib/docs.d.ts",
-      "import": "./dist/index.min.js"
+      "default": "./dist/index.min.js"
     },
     "./light/min": {
       "types": "./dist/types/packages/doc-read/src/lib/docs-light.d.ts",
-      "import": "./dist/light.min.js"
+      "default": "./dist/light.min.js"
     }
   },
   "publishConfig": {
@@ -48,6 +49,7 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "dependencies": {
