@@ -6,10 +6,13 @@ All notable changes to `docs-scribe` are written here. The format follows
 version may break the published surface, and a patch never does. Dates are the publication dates on
 the npm registry (UTC).
 
-## [Unreleased]
+## [0.6.0] - 2026-11-20
 
 ### Changed
 
+- `doc-ir` becomes a dependency taken from the npm registry (`^0.1.0`): the base both readers share
+  — the representation a read document comes back in, and the measure that says no word was lost —
+  now installs as its own package instead of shipping inside this one.
 - Licence: MIT (was AGPL-3.0-or-later up to 0.5.0). The versions already published keep their
   licence. A new `THIRD-PARTY.md` carries the third-party notices the bundle owes: SheetJS SSF,
   jpeg-js, the Adobe glyph list, pdf.js, and the text of the Apache License 2.0.
