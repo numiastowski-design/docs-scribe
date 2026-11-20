@@ -8,6 +8,19 @@ the npm registry (UTC).
 
 ## [Unreleased]
 
+### Changed
+
+- Licence: MIT (was AGPL-3.0-or-later up to 0.5.0). The versions already published keep their
+  licence. A new `THIRD-PARTY.md` carries the third-party notices the bundle owes: SheetJS SSF,
+  jpeg-js, the Adobe glyph list, pdf.js, and the text of the Apache License 2.0.
+- The type declarations of the package's own modules moved inside the archive, from
+  `dist/types/packages/doc-read/src/…` to `dist/types/packages/docs-scribe/src/…`. The `exports` map
+  follows, so the four entries resolve as before; only a deep import of a declaration file sees it.
+- The declarations of the slide layout, of the PNG decoder and of the zip gate that only this reader
+  uses moved too, from `dist/types/packages/doc-ir/src/…` and `dist/types/packages/doc-gate/src/…`
+  to `dist/types/packages/docs-scribe/src/…`. What stays under `dist/types/packages/doc-ir/` is what
+  both readers share. The four entries resolve as before.
+
 ## [0.5.0] - 2026-11-17
 
 ### Added

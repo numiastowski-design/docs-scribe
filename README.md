@@ -8,8 +8,6 @@ The declared-formats reader of [Miksumia Publisher](https://miksumia.com), the A
 uploaded files into Confluence pages. PDF is the other half, published as
 [pdf-skryba](https://www.npmjs.com/package/pdf-skryba).
 
-Published on npm as [`docs-scribe`](https://www.npmjs.com/package/docs-scribe): `npm i docs-scribe`.
-
 ## Install
 
 ```sh
@@ -25,17 +23,20 @@ ES modules only, for Node.js 24 or later; the types ship with the package. From 
 // read.ts: node read.js report.docx
 import { readFileSync } from "node:fs";
 import { extractDocx } from "docs-scribe";
-import { ReaderError } from "docs-scribe/light";
+import type { ReaderError } from "docs-scribe/light";
 
 const path = process.argv[2];
 if (path === undefined) throw new Error("usage: node read.js <file.docx>");
+
+// A refusal is told by its name: that holds whichever entry, and whichever copy of the package, threw it.
+const isRefusal = (error: unknown): error is ReaderError => error instanceof Error && error.name === "ReaderError";
 
 try {
   const { doc, notices } = await extractDocx(new Uint8Array(readFileSync(path)));
   console.log(`blocks: ${doc.blocks.length}`);
   console.log(`notices: ${notices?.length ?? 0}`);
 } catch (error) {
-  if (!(error instanceof ReaderError)) throw error;
+  if (!isRefusal(error)) throw error;
   console.error(`refused: ${error.code}`);
   process.exitCode = 1;
 }
@@ -83,16 +84,18 @@ sizes before a byte is inflated.
 
 ```js
 import { assertZipDeclaredSizesSafe } from "docs-scribe";
-import { ReaderError } from "docs-scribe/light";
 
 assertZipDeclaredSizesSafe(bytes); // throws on a declared-size bomb or on overlapping entries
 
 try {
   await extractDocx(bytes);
 } catch (error) {
-  if (error instanceof ReaderError) error.code; // "FILE_UNSAFE", "EXTRACT_FAILED"…
+  if (error instanceof Error && error.name === "ReaderError") error.code; // "FILE_UNSAFE", "EXTRACT_FAILED"…
 }
 ```
+
+A refusal is an `Error` named `ReaderError`. Tell it by that name: it holds whichever entry, and
+whichever copy of the package, threw the error. `docs-scribe/light` exports the type.
 
 ## Check what you published
 
@@ -174,17 +177,31 @@ Four entries, two of them the minified twins of the others.
   representation (`IRDoc`, `IRBlock`, `TableData`…).
 - `docs-scribe/min` and `docs-scribe/light/min` — the same code, minified.
 
+## Publisher-only entries
+
+The sub-paths under `docs-scribe/first-party` exist for the publisher's own application. They are
+**not a public API**: they may change or disappear in any version, and Semantic Versioning does not
+cover them. The source is open, so nothing stops you from importing them; if you do, pin an exact
+version.
+
 ## Versioning
 
 The package follows [Semantic Versioning](https://semver.org): while it is `0.x`, a minor version
 may break the published surface, and a patch never does. Each release is described in
 `CHANGELOG.md`, shipped in the package.
 
+## Contributing and security
+
+See `CONTRIBUTING.md` and `SECURITY.md` in the
+[repository](https://github.com/numiastowski-design/docs-scribe). A contribution is received under
+the MIT licence of the repository. Author: Miksumia.
+
 ## Licence
 
-AGPL-3.0-or-later: run a modified version as a network service and its source must be available to its
-users. Since 0.4.1 the code comes readable (`dist/index.js`), with the same code minified beside it
-(`docs-scribe/min`). This repository is that source — a snapshot of the packages the npm bundle is built from, taken
-from the development monorepo at version 0.5.0 (17 November 2026). The entry points are
-`packages/doc-read/src/lib/docs.ts` and `packages/doc-read/src/lib/docs-light.ts`; the npm package ships
-the bundle built from them. Questions: <contact@miksumia.com>.
+MIT (`LICENSE`), from version 0.6.0. Versions up to 0.5.0 stay under AGPL-3.0-or-later. The bundle
+carries third-party material under its own notices (`THIRD-PARTY.md`). The test documents of the
+repository are not under the MIT licence: each keeps its own, written in `fixtures/**/SOURCES.md`.
+
+Since 0.4.1 the code comes readable (`dist/index.js`), with the same code minified beside it
+(`docs-scribe/min`). This package ships a bundle and its source map. The Corresponding Source is published at
+<https://github.com/numiastowski-design/docs-scribe>, as one snapshot for each released version.
