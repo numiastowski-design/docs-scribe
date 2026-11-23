@@ -48,7 +48,7 @@ export interface HtmlExportImage {
   readonly widthPx: number;
   readonly heightPx: number;
   /** The text of the last non-empty paragraph that ENDS before the image's
-   *  own paragraph (§5.3: « the text of the previous paragraph »), or "". */
+   *  own paragraph, or "". */
   readonly previousText: string;
 }
 

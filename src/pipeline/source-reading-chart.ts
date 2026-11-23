@@ -294,7 +294,10 @@ const labelFormatOf = (ser: N): string | undefined => {
 const shownFormatOf = (ser: N, numCache: N | undefined): string | undefined =>
   labelFormatOf(ser) ?? cacheFormatOf(numCache);
 
-/** The cache a number reference makes from the sheet: its numeric cells only, shown with the data labels' format when they decide it. */
+/** The cache a number reference makes from the sheet: its numeric cells only, shown with the data labels' format when they decide it.
+ *  WRITTEN LIMIT (23/11/2026): without a label format a value stays in General (« 0.81 »), where the page shows the cell's own format (« 81% »).
+ *  It changes nothing checked: only the workbook's structure reads a chart from its sheet, and it counts filled cells, never words; a number its
+ *  format hides is already out of the kept grid (`source-reading-xlsx.ts`). Writing the cell's format here would add a reading that decides nothing. */
 const numbersFromSheet = (
   read: readonly SheetCell[],
   labelCode: string | undefined,

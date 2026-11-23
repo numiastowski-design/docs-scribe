@@ -39,6 +39,14 @@ describe("Word, la couleur que le fichier énonce", () => {
     expect(await firstInline('<w:color w:val="FF0000"/>')).toMatchObject({ text: "règle", color: "#ff0000" });
   });
 
+  it("🔴 white and black text are never handed on (`styles.ts#INVISIBLE_OR_DEFAULT`), in either case, and the text stays", async () => {
+    for (const hex of ["FFFFFF", "ffffff", "000000"]) {
+      const inline = await firstInline(`<w:color w:val="${hex}"/>`);
+      expect(inline, hex).toMatchObject({ text: "règle" });
+      expect(inline, hex).not.toHaveProperty("color");
+    }
+  });
+
   it("🔴 un surlignage nommé est gardé sous son nom, en minuscules", async () => {
     expect(await firstInline('<w:highlight w:val="yellow"/>')).toMatchObject({ background: "yellow" });
     expect(await firstInline('<w:highlight w:val="darkBlue"/>')).toMatchObject({ background: "darkblue" });
