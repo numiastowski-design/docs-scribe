@@ -6,6 +6,14 @@ All notable changes to `docs-scribe` are written here. The format follows
 version may break the published surface, and a patch never does. Dates are the publication dates on
 the npm registry (UTC).
 
+## [0.7.0] - 2026-11-24
+
+### Changed
+
+- `doc-ir` moves to `^0.2.0`. Its notice union gains the PDF kind `pdf-part-unread`, which this
+  package never produces; the re-exported union may still break an exhaustive `switch`, hence a
+  minor version. No change to what this package reads or returns.
+
 ## [0.6.0] - 2026-11-20
 
 ### Changed
