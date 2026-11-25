@@ -277,7 +277,8 @@ describe("xml decode — real parts of the versioned fixtures, transcoded to UTF
   it("the same events as on the UTF-8 original, in both byte orders", async () => {
     // Small parts only (a transcoded copy of each is made twice); the parts our reader reads.
     const parts = await fixtureXmlParts((part) => part.text.length < 64 * 1024 && readerAccepts(part.text));
-    expect(parts.length).toBeGreaterThan(3_000);
+    // Floor re-measured on the public documents (25/11/2026): 2 982 parts.
+    expect(parts.length).toBeGreaterThan(2_981);
     for (const part of parts) {
       const expected = eventsOf(part.text);
       const le = declaring(part.text, "UTF-16");
@@ -296,7 +297,8 @@ describe("xml decode — real parts of the versioned fixtures, transcoded to UTF
       if (part.bytes === undefined || decodeXmlPart(part.bytes).text !== product.decode(part.bytes))
         differing.push(part.id);
     });
-    expect(count).toBeGreaterThan(6_000);
+    // Floor re-measured on the public documents (25/11/2026): 3 116 parts.
+    expect(count).toBeGreaterThan(3_115);
     expect(differing).toEqual([]);
   }, 300_000);
 

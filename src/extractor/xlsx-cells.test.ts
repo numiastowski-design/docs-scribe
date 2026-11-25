@@ -70,8 +70,8 @@ const sheetOf = async (
 };
 
 // Cells holding a value, per fixture — guards the count itself: an empty
-// walk would compare nothing. 31 264 in all (23 442 over seventeen of the original 19 fixtures, study of 29/09/2026, point 2; the FAQ adds 7 822,
-// widened 9e3d3d3/9ede124 with real, open-data and Google Sheets exports).
+// walk would compare nothing. 18 238 in all over the twelve public workbooks (study of 29/09/2026, point 2, widened with real,
+// open-data and Google Sheets exports).
 const FIXTURE_CELLS: Record<string, number> = {
   "xlsx/04-Effectifs-Atria.xlsx": 10_065,
   "xlsx/09-Effectifs-Dates.xlsx": 9,
@@ -87,9 +87,10 @@ const FIXTURE_CELLS: Record<string, number> = {
   "xlsx-reel/21-GSheets-Planning-Formations.xlsx": 42,
 };
 
-describe("xlsx-cells — cell counts on the eighteen fixtures (was: parity with SheetJS)", () => {
-  it("the eighteen fixtures are all here", () => {
-    expect(FIXTURES).toHaveLength(18);
+describe("xlsx-cells — cell counts on the twelve fixtures (was: parity with SheetJS)", () => {
+  it("the twelve fixtures are all here", () => {
+    // Count re-measured on the public documents (25/11/2026).
+    expect(FIXTURES).toHaveLength(12);
   });
 
   for (const f of FIXTURES) {

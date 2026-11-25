@@ -88,7 +88,8 @@ describe("xml-parser — the callers' call shape, answered by our reader", () =>
   it("every versioned XML part under 1 M characters is read, from its text and from its bytes, to the same tree", async () => {
     const { docxReaderOptions } = await productParsers();
     const parts = await fixtureXmlParts((part) => part.text.length < 1_000_000);
-    expect(parts.length).toBeGreaterThan(6000);
+    // Floor re-measured on the public documents (25/11/2026): 3 100 parts.
+    expect(parts.length).toBeGreaterThan(3_099);
     const ours = new XmlParser(docxReaderOptions);
     for (const part of parts) {
       let fromText: unknown;
@@ -118,7 +119,8 @@ describe("xml-parser — the callers' call shape, answered by our reader", () =>
       const digest = digests.get(part.document) ?? new JsonDigest();
       digests.set(part.document, digest.add(part.id, reading));
     });
-    expect(parts).toBeGreaterThan(6000);
+    // Floor re-measured on the public documents (25/11/2026): 3 100 parts.
+    expect(parts).toBeGreaterThan(3_099);
     const emptyDocument = new JsonDigest().hex();
     expectPinned(
       "documents",

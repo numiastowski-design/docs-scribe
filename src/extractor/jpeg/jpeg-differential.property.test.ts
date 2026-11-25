@@ -154,7 +154,8 @@ const apply = (seed: Uint8Array, d: Damage): Uint8Array => {
 
 describe("decodeJpegRgba against jpeg-js on damaged JPEGs (differential fuzz)", () => {
   it("has seeds of every kind of the fixtures, each accepted by both", () => {
-    expect(seeds.length).toBe(7); // the 7th kind, progressive 4:4:4 Adobe, from fixtures/docx-reel/11 (06/10)
+    // Count re-measured on the public documents (25/11/2026); one kind is progressive 4:4:4 Adobe, from fixtures/docx-reel/11.
+    expect(seeds.length).toBe(5);
     for (const seed of seeds) {
       const a = ours(seed);
       const b = theirs(seed);

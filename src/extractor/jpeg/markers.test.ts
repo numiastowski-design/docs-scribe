@@ -59,11 +59,12 @@ const refusal = (bytes: Uint8Array, guard = GUARD): ReaderError => {
 // --- Fixtures ----------------------------------------------------------------
 
 describe("parseJpeg on every JPEG of the fixtures", () => {
-  it("finds the 73 distinct JPEGs, and reads the same size as jpeg-js and as jpegHeader", async () => {
+  it("finds the 31 distinct JPEGs, and reads the same size as jpeg-js and as jpegHeader", async () => {
     const all = await fixtureJpegs();
     // Independent reading (Python survey of the same documents, 05/10/2026; the 73rd, from fixtures/docx-reel/11-dgemc-programme-terminale.docx,
     // read by Pillow 12.3 and a separate marker count on 06/10: progressive, 4:4:4, Adobe transform 1, 7 scans, 208×91).
-    expect(all.length).toBe(74);
+    // Count re-measured on the public documents (25/11/2026).
+    expect(all.length).toBe(31);
     for (const { id, bytes } of all) {
       const s = parseJpeg(bytes, GUARD);
       const ref = decodeJpegJs(bytes, {
@@ -90,16 +91,15 @@ describe("parseJpeg on every JPEG of the fixtures", () => {
       scans.set(s.scans.length, (scans.get(s.scans.length) ?? 0) + 1);
       for (const scan of s.scans) expect(scan.data.length).toBeGreaterThan(0);
     }
+    // Both tallies re-measured on the public documents (25/11/2026).
     expect(Object.fromEntries(kinds)).toEqual({
-      "baseline 2x2,1x1,1x1 adobe=-": 53,
-      "progressive 2x2,1x1,1x1 adobe=-": 12,
-      "baseline 1x1,1x1,1x1 adobe=-": 5,
+      "baseline 1x1,1x1,1x1 adobe=-": 3,
+      "baseline 2x2,1x1,1x1 adobe=-": 23,
       "baseline 2x1,1x1,1x1 adobe=-": 1,
-      "baseline 1x1,1x1,1x1 adobe=1": 1,
-      "baseline 1x1 adobe=-": 1,
+      "progressive 2x2,1x1,1x1 adobe=-": 3,
       "progressive 1x1,1x1,1x1 adobe=1": 1,
     });
-    expect(Object.fromEntries(scans)).toEqual({ 1: 61, 10: 9, 8: 2, 7: 1, 6: 1 });
+    expect(Object.fromEntries(scans)).toEqual({ 1: 27, 10: 1, 8: 2, 7: 1 });
   }, 120_000);
 });
 

@@ -151,11 +151,12 @@ const noiseRgba = (w: number, h: number, seed: number): Uint8Array => {
 // --- Tests ---------------------------------------------------------------------
 
 describe("decodeJpegRgba against jpeg-js, pixel for pixel without subsampling (tolerance 0), bounded with it", () => {
-  it("every byte of the RGBA of the 60 sequential JPEGs of the fixtures (the 7 unsubsampled ones, the APP14 one included, identical), the others bounded", async () => {
+  it("every byte of the RGBA of the 27 sequential JPEGs of the fixtures (the 3 unsubsampled ones identical), the others bounded", async () => {
     const sequential = (await fixtureJpegs()).filter(
       (f) => parseJpeg(f.bytes, { maxPixels: 12e6 }).frame.process !== "progressive",
     );
-    expect(sequential.length).toBe(61);
+    // Counts re-measured on the public documents (25/11/2026).
+    expect(sequential.length).toBe(27);
     let identical = 0;
     for (const { id, bytes } of sequential) {
       const ours = decodeJpegRgba(bytes, GUARD);
@@ -165,7 +166,7 @@ describe("decodeJpegRgba against jpeg-js, pixel for pixel without subsampling (t
       if (!subsampled) identical++;
       sameAsJpegJs(ours.data, ref.data, subsampled, id);
     }
-    expect(identical).toBe(7);
+    expect(identical).toBe(3);
   }, 300_000);
 
   it("JPEGs written by jpeg-js's encoder, sizes not multiple of 8, from 1 × 1 up", () => {

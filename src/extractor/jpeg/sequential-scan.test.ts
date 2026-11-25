@@ -197,11 +197,12 @@ describe("decodeSequentialScan on every sequential JPEG of the fixtures", () => 
    * on every block whose region no sample clipped to 0 or 255. A desynchronised
    * AC decode would shift every later DC.
    */
-  it("decodes every block of the 60 sequential JPEGs, each DC agreeing with jpeg-js's block mean", async () => {
+  it("decodes every block of the 27 sequential JPEGs, each DC agreeing with jpeg-js's block mean", async () => {
     const sequential = (await fixtureJpegs())
       .map((f) => ({ ...f, s: parseJpeg(f.bytes, GUARD) }))
       .filter((f) => f.s.frame.process !== "progressive");
-    expect(sequential.length).toBe(61);
+    // Count re-measured on the public documents (25/11/2026).
+    expect(sequential.length).toBe(27);
     let checked = 0;
     for (const { id, bytes, s } of sequential) {
       const coefficients = decodeAll(s);

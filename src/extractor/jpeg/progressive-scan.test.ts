@@ -58,11 +58,12 @@ const WORST = 75;
 const MEAN = 1.5;
 
 describe("decodeJpegRgba on progressive JPEGs, against jpeg-js (same size, bounded distance: 4:2:0)", () => {
-  it("the RGBA of the 13 progressive JPEGs of the fixtures (the 13th, 4:4:4 Adobe, from docx-reel/11, added 06/10), whose scans exercise the four kinds of T.81 G.1.2", async () => {
+  it("the RGBA of the 4 progressive JPEGs of the fixtures (one 4:4:4 Adobe, from docx-reel/11), whose scans exercise the four kinds of T.81 G.1.2", async () => {
     const progressives = (await fixtureJpegs())
       .map((f) => ({ ...f, s: parseJpeg(f.bytes, { maxPixels: 12e6 }) }))
       .filter((f) => f.s.frame.process === "progressive");
-    expect(progressives.length).toBe(13);
+    // Count re-measured on the public documents (25/11/2026).
+    expect(progressives.length).toBe(4);
     const kinds = new Set<string>();
     for (const { id, bytes, s } of progressives) {
       for (const scan of s.scans) kinds.add(`${scan.ss === 0 ? "dc" : "ac"} ${scan.ah === 0 ? "first" : "refine"}`);

@@ -270,11 +270,12 @@ describe("componentPlanes", () => {
    * floor(x × H / Hmax)), as R, G, B. Every sample we compute must be the one
    * jpeg-js drew, exactly: same integer factorisation of the IDCT.
    */
-  it("gives exactly jpeg-js's samples, every component of every pixel, on the 60 sequential JPEGs of the fixtures", async () => {
+  it("gives exactly jpeg-js's samples, every component of every pixel, on the 27 sequential JPEGs of the fixtures", async () => {
     const sequential = (await fixtureJpegs())
       .map((f) => ({ ...f, s: parseJpeg(f.bytes, GUARD) }))
       .filter((f) => f.s.frame.process !== "progressive");
-    expect(sequential.length).toBe(61);
+    // Count re-measured on the public documents (25/11/2026).
+    expect(sequential.length).toBe(27);
     let compared = 0;
     for (const { id, bytes, s } of sequential) {
       // An APP14 transform forces jpeg-js to convert colours: its channels are not the components (slice 4).

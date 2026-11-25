@@ -15,21 +15,19 @@ const GUARD = { maxResolutionInMP: 12, maxMemoryUsageInMB: 256 };
 /** Starting values to calibrate, measured 06/10/2026 (mean absolute error per channel, 0..255 scale).
  *  MAE_GRADIENT: a ramp in each channel, quality 90; measured 0 (1×1), 3.79 (15×17), 4.07 (16×16), 6.23 (17×9), 0.80 (257×131):
  *  chroma averaged over 2×2 pixels loses most where the ramp steps fastest (a 16-pixel ramp steps 16 levels per pixel). Bound 6.5.
- *  MAE_FIXTURE: every sixth fixture JPEG, decoded then re-encoded at 80; measured 0.00 to 5.90 over the 12 pictures. Bound 6.5. */
+ *  MAE_FIXTURE: every sixth fixture JPEG, decoded then re-encoded at 80; measured 0.00 to 5.90 over the 12 pictures of 06/10/2026
+ *  (6 pictures on the public documents, 25/11/2026). Bound 6.5. */
 const MAE_GRADIENT = 6.5;
 const MAE_FIXTURE = 6.5;
-/** Total bytes of the fixture JPEGs, decoded then re-encoded at quality 80, measured 06/10/2026: on the first 72, old 4:4:4
- *  encoder (jpeg-js's bytes) 5 799 000, this 4:2:0 encoder 4 904 491 (15.4 % fewer; libjpeg measured 14.7 %). The 73rd (the
- *  progressive 4:4:4 Adobe picture of fixtures/docx-reel/11-dgemc-programme-terminale.docx, added 06/10) measured alone with
- *  jpeg-js: 7 590 bytes. */
-const OLD_444_TOTAL = 5_799_000 + 7_590;
-/** Same fixtures, decoded then re-encoded at 80, measured 06/10/2026 (the decoder's fancy chroma upsampling already in; the 4 904 491 above
- *  predates it): on the first 72, example tables 4 865 428 and per-image tables 4 646 581 (4.5 % fewer; libjpeg's optimize_coding gains
- *  3 to 6 % on photographs); the 73rd adds 5 706 and 5 235. The 74th (the picture of
- *  fixtures/docx-reel/12-normene-maths-tle-pro.docx, added 29/10/2026 with the document of issue #60) adds 47 323 and
- *  43 635. These totals COUNT the corpus, they judge nothing: a fixture dropped in the tree moves them. */
-const FIXED_TABLES_TOTAL = 4_865_428 + 5_706 + 47_323;
-const OPTIMIZED_TOTAL = 4_646_581 + 5_235 + 43_635;
+/** Total bytes of the fixture JPEGs, decoded then re-encoded at quality 80 by the old 4:4:4 encoder (jpeg-js's bytes): 5 799 000
+ *  on 72 pictures on 06/10/2026, this 4:2:0 encoder 4 904 491 (15.4 % fewer; libjpeg measured 14.7 %). Re-measured on the public documents (25/11/2026):
+ *  1 875 156 bytes on the 31 public pictures (jpeg-js's encoder at 80 on our decoding). */
+const OLD_444_TOTAL = 1_875_156;
+/** Same fixtures, decoded then re-encoded at 80: example tables against per-image tables (on 74 pictures, 06/10 and 29/10/2026:
+ *  4 918 457 and 4 695 451, 4.5 % fewer; libjpeg's optimize_coding gains 3 to 6 % on photographs). Re-measured on the public documents (25/11/2026) (31
+ *  pictures). These totals COUNT the corpus, they judge nothing: a fixture dropped in the tree moves them. */
+const FIXED_TABLES_TOTAL = 1_586_936;
+const OPTIMIZED_TOTAL = 1_497_735;
 
 /** Deterministic pseudo-random bytes (an LCG), like the repository's tests. */
 const noise = (length: number, seed = 1): Uint8Array => {
@@ -200,7 +198,8 @@ describe("encodeJpegRgba — read back by two independent decoders", () => {
       expect(meanAbsoluteError(image, back), id).toBeLessThanOrEqual(MAE_FIXTURE);
       checked++;
     }
-    expect(checked).toBeGreaterThanOrEqual(12);
+    // Floor re-measured on the public documents (25/11/2026).
+    expect(checked).toBeGreaterThanOrEqual(6);
   });
 
   it("stays within 7 levels of a smooth source at quality 100 (stated tolerance: chroma averaging and rounding loss)", () => {
@@ -325,7 +324,7 @@ describe("encodeJpegRgba — per-image Huffman tables (T.81 annex K.2, libjpeg o
     }
   });
 
-  it("writes fewer bytes in total than the example tables on the 73 fixture JPEGs, decoded then re-encoded at quality 80", async () => {
+  it("writes fewer bytes in total than the example tables on the 31 fixture JPEGs, decoded then re-encoded at quality 80", async () => {
     const jpegs = await fixtureJpegs();
     let optimized = 0;
     let fixed = 0;
@@ -334,6 +333,7 @@ describe("encodeJpegRgba — per-image Huffman tables (T.81 annex K.2, libjpeg o
       optimized += encodeJpegRgba(image, 80).length;
       fixed += fixedTables(image, 80).length;
     }
+    // Both totals re-measured on the public documents (25/11/2026).
     expect(fixed).toBe(FIXED_TABLES_TOTAL);
     expect(optimized).toBeLessThan(fixed);
     expect(optimized).toBe(OPTIMIZED_TOTAL);
@@ -368,10 +368,11 @@ describe("encodeJpegRgba — the end of the entropy-coded segment (T.81 F.1.2.3)
   });
 });
 
-describe("encodeJpegRgba — the 73 fixture JPEGs, decoded then re-encoded at quality 80", () => {
+describe("encodeJpegRgba — the 31 fixture JPEGs, decoded then re-encoded at quality 80", () => {
   it("writes at least 10 % fewer bytes than the old 4:4:4 encoder (OLD_444_TOTAL in total)", async () => {
     const jpegs = await fixtureJpegs();
-    expect(jpegs.length).toBe(74);
+    // Count and OLD_444_TOTAL re-measured on the public documents (25/11/2026).
+    expect(jpegs.length).toBe(31);
     let total = 0;
     for (const { bytes } of jpegs) total += encodeJpegRgba(decodeJpegRgba(bytes, GUARD), 80).length;
     expect(total).toBeLessThanOrEqual(OLD_444_TOTAL * 0.9);
