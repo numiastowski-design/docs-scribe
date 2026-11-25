@@ -4,21 +4,32 @@
 # Held by tools/package-fixtures-public.test.ts; the SOURCES.md of each folder is written from it (npx tsx tools/public-fixtures.ts).
 path	status	origin	licence	attribution	source	checked	note
 fixtures/diagrammes-generes/a-en-label-on-connector.docx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
+fixtures/diagrammes-generes/a-en-label-on-connector.pptx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
 fixtures/diagrammes-generes/b-fr-label-above-arrow.docx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
+fixtures/diagrammes-generes/b-fr-label-above-arrow.pptx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
+fixtures/diagrammes-generes/c-en-arrow-no-label.pptx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
+fixtures/diagrammes-generes/d-fr-label-between-two-arrows.pptx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
 fixtures/diagrammes-generes/e-en-org-chart-elbow.docx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
+fixtures/diagrammes-generes/e-en-org-chart-elbow.pptx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
+fixtures/diagrammes-generes/f-fr-raster-diagram-only.pptx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
 fixtures/diagrammes-generes/g-en-bar-chart.docx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept; author properties rewritten by tools/office-properties-scrub.ts
 fixtures/diagrammes-generes/g-en-bar-chart.xlsx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
 fixtures/diagrammes-generes/g-fr-graphique-barres.docx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept; author properties rewritten by tools/office-properties-scrub.ts
+fixtures/diagrammes-generes/g-fr-graphique-barres.pptx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
 fixtures/diagrammes-generes/g-fr-graphique-barres.xlsx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
 fixtures/diagrammes-generes/h-en-pie-chart.docx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept; author properties rewritten by tools/office-properties-scrub.ts
+fixtures/diagrammes-generes/h-en-pie-chart.pptx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
 fixtures/diagrammes-generes/h-fr-graphique-secteurs.docx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept; author properties rewritten by tools/office-properties-scrub.ts
 fixtures/diagrammes-generes/i-fr-categories-deux-niveaux.docx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept; author properties rewritten by tools/office-properties-scrub.ts
 fixtures/diagrammes-generes/i-fr-categories-deux-niveaux.pptx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
 fixtures/diagrammes-generes/i-fr-categories-deux-niveaux.xlsx	public	made	own	none	fixtures/diagrammes-generes/README.md	2026-11-19	written with python-pptx, xlsxwriter and Microsoft Word; no generator kept
+fixtures/diagrammes-reel/02-storms-flowcharts.pptx	public	third-party	CC BY 4.0	Mirzayi, Waldron et al. (2021), doi:10.5281/zenodo.5714305, CC BY 4.0	https://doi.org/10.5281/zenodo.5714305	2026-11-19	none
 fixtures/diagrammes-reel/03-pvi-decision-trees.pptx	public	third-party	CC BY 4.0	Isemer, Fellmann et al., doi:10.5281/zenodo.18223964, CC BY 4.0	https://doi.org/10.5281/zenodo.18223964	2026-11-19	none
+fixtures/diagrammes-reel/04-ceda-metadata.pptx	public	third-party	CC BY 4.0	Callaghan, Juckes et al. (2012), doi:10.5281/zenodo.7356171, CC BY 4.0	https://doi.org/10.5281/zenodo.7356171	2026-11-19	none
 fixtures/diagrammes-reel/05-libya-qatar-org-structure.docx	public	third-party	CC BY 4.0	Elzawi (2022), doi:10.5281/zenodo.6772988, CC BY 4.0	https://doi.org/10.5281/zenodo.6772988	2026-11-19	none
 fixtures/diagrammes-reel/06-fr-la-veille.pptx	public	third-party	CC BY 4.0	Latour (2019), doi:10.5281/zenodo.3244079, CC BY 4.0	https://doi.org/10.5281/zenodo.3244079	2026-11-19	none
 fixtures/diagrammes-reel/07-fr-trouver-une-image.pptx	public	third-party	CC BY 4.0	Latour (2019), doi:10.5281/zenodo.3244075, CC BY 4.0	https://doi.org/10.5281/zenodo.3244075	2026-11-19	none
+fixtures/diagrammes-reel/08-fr-zotero.pptx	public	third-party	CC BY 4.0	Latour, Boiteux (2019), doi:10.5281/zenodo.3244086, CC BY 4.0	https://doi.org/10.5281/zenodo.3244086	2026-11-19	none
 fixtures/diagrammes-reel/212-4416657.docx	public	third-party	CC0 1.0	Panke, Diana, « International Organizations' Deliberative Institutional Design », Harvard Dataverse, doi:10.7910/DVN/3ASANB (no attribution required, cited by courtesy)	https://doi.org/10.7910/DVN/3ASANB	2026-11-19	none
 fixtures/docx-corpus-cases/200-2022-23-sshrcs-report-on-competition.docx	public	third-party	OGL-Canada	Social Sciences and Humanities Research Council of Canada. Contains information licensed under the Open Government Licence – Canada.	https://open.canada.ca/data/dataset/de77fb31-436d-40f6-a784-85266b7b84aa	2026-11-19	none
 fixtures/docx-corpus-cases/214-7587700.docx	public	third-party	CC0 1.0	Silva, Miguel (2023), « AeonLabs 2014-16 business Plan », Harvard Dataverse, doi:10.7910/DVN/4UYZH2 (no attribution required, cited by courtesy)	https://doi.org/10.7910/DVN/4UYZH2	2026-11-19	none
@@ -59,7 +70,15 @@ fixtures/docx/08-Consignes-Encadrees.docx	public	made	own	none	fixtures/docx/06-
 fixtures/docx/09-FABRIQUE-Ruby-Mot-Perdu.docx	public	made	own	none	fixtures/docx/09-FABRIQUE-Ruby-Mot-Perdu.generator.mjs	2026-11-19	
 fixtures/docx/refuses/09-Fiche-Contact-Protegee.docx	public	made	own	none	said by the maintainer on 2026-11-19; no generator kept	2026-11-19	a made-up Word document protected by a password
 fixtures/gdoc-docx/01-Guide-Onboarding-Atria.docx	public	made	own	none	said by the maintainer on 2026-11-19; no generator kept	2026-11-19	exported from Google Docs
+fixtures/jpeg/ours-420-64x48.jpg	public	made	own	none	fixtures/jpeg/README.md	2026-11-19	written by the library's own JPEG encoder
+fixtures/jpeg/ours-420-64x48.pillow-rgb.bin	public	derived	own	none	fixtures/jpeg/ours-420-64x48.jpg	2026-11-19	Pillow's reading of the picture (fixtures/jpeg/make-pillow-references.py)
+fixtures/jpeg/pillow-422-baseline-2144x1424.bin	public	derived	CC BY 4.0	Isemer, Fellmann et al., doi:10.5281/zenodo.18223964, CC BY 4.0	fixtures/diagrammes-reel/03-pvi-decision-trees.pptx	2026-11-19	Pillow's reading of one JPEG of the deck, first and last 16 rows (fixtures/jpeg/make-pillow-references.py)
+fixtures/jpeg/pillow-sample-cmyk.jpg	public	third-party	HPND	Pillow test image Tests/images/pil_sample_cmyk.jpg, © the Pillow authors, HPND licence	https://github.com/python-pillow/Pillow	2026-11-19	none
+fixtures/jpeg/pillow-sample-cmyk.pillow-rgb.bin	public	derived	HPND	Pillow test image Tests/images/pil_sample_cmyk.jpg, © the Pillow authors, HPND licence	fixtures/jpeg/pillow-sample-cmyk.jpg	2026-11-19	Pillow's reading of the picture (fixtures/jpeg/make-pillow-references.py)
+fixtures/marketplace/quarterly-review.pptx	public	made	own	none	fixtures/marketplace/make_quarterly_review.py	2026-11-19	
 fixtures/pptx/03-Presentation-Resultats-T1.pptx	public	made	own	none	said by the maintainer on 2026-11-19; no generator kept	2026-11-19	
+fixtures/pptx/04-Images-tournees.pptx	public	made	own	none	said by the maintainer on 2026-11-19; no generator kept	2026-11-19	
+fixtures/pptx/05-Groupes-tournes.pptx	public	made	own	none	said by the maintainer on 2026-11-19; no generator kept	2026-11-19	
 fixtures/xlsx-heading-reel/03-bilan-recolement-paca.xlsx	public	third-party	Licence Ouverte 2.0	Source : Commission de récolement des dépôts d'œuvres d'art, data.gouv.fr	https://www.data.gouv.fr/datasets/bilan-du-recolement-des-depots-doeuvres-dart-en-provence-alpes-cote-dazur	2026-11-19	none
 fixtures/xlsx-heading-reel/04-bilan-recolement-corse.xlsx	public	third-party	Licence Ouverte 2.0	Source : Commission de récolement des dépôts d'œuvres d'art, data.gouv.fr	https://www.data.gouv.fr/datasets/bilan-du-recolement-des-depots-en-corse	2026-11-19	none
 fixtures/xlsx-heading-reel/13-recolement-grand-est.xlsx	public	third-party	Licence Ouverte 2.0	Source : Commission de récolement des dépôts d'œuvres d'art, data.gouv.fr	https://www.data.gouv.fr/datasets/bilan-du-recolement-des-depots-doeuvres-dart-dans-le-grand-est	2026-11-19	none
@@ -76,3 +95,9 @@ fixtures/xlsx/09-Effectifs-Dates.xlsx	public	made	own	none	fixtures/xlsx/09-10.g
 fixtures/xlsx/10-Commentaires-Cellules.xlsx	public	made	own	none	fixtures/xlsx/09-10.generator.mjs	2026-11-19	
 fixtures/xlsx/11-FABRIQUE-Ventes-Graphique-Liens.xlsx	public	made	own	none	fixtures/xlsx/11-12.generator.py	2026-11-19	
 fixtures/xlsx/12-FABRIQUE-Formules-Sans-Valeur.xlsx	public	made	own	none	fixtures/xlsx/11-12.generator.py	2026-11-19	
+golden/docx/01-Guide-Onboarding-Atria.xhtml	public	derived	own	none	fixtures/docx/01-Guide-Onboarding-Atria.docx	2026-11-19	the page the app published from the document, kept as a reference
+golden/docx/02-Procedure-Support-IT.xhtml	public	derived	own	none	fixtures/docx/02-Procedure-Support-IT.docx	2026-11-19	the page the app published from the document, kept as a reference
+golden/gdoc/01-Guide-Onboarding-Atria-GDOC.xhtml	public	derived	own	none	fixtures/gdoc/01-Guide-Onboarding-Atria-export.zip	2026-11-19	the page the app published from the document, kept as a reference
+golden/pdf/05a-Rapport-Annuel-Digital.xhtml	public	derived	own	none	fixtures/pdf/05a-Rapport-Annuel-Digital.pdf	2026-11-19	the page the app published from the document, kept as a reference
+golden/pdf/18-Composition-Reelle.xhtml	public	derived	own	none	fixtures/pdf/18-Composition-Reelle.pdf	2026-11-19	the page the app published from the document, kept as a reference
+golden/pptx/03-Presentation-Resultats-T1.xhtml	public	derived	own	none	fixtures/pptx/03-Presentation-Resultats-T1.pptx	2026-11-19	the page the app published from the document, kept as a reference
