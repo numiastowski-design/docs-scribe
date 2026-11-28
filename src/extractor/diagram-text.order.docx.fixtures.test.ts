@@ -10,7 +10,8 @@ import { extractDocx } from "./docx";
 
 // Milestone 1 of the diagram text (relation order), Word side: the text boxes of ONE paragraph's drawings are published
 // in the order of the connectors the geometry declares (no `a:stCxn` in any Word file measured). `BEFORE` is the
-// multiset of words each document published before the order moved: only the order may move, never a word.
+// word count and the sha256 of the sorted words each document published before the order moved: only the order may
+// move, never a word.
 // Came from the publisher's application on 28/11/2026, where it read only this package.
 vi.setConfig({ testTimeout: 60_000 });
 
