@@ -139,6 +139,10 @@ The registry also lists `0.0.0-stage`, a placeholder npm creates for staged publ
 release.
 
 [Unreleased]: https://github.com/numiastowski-design/docs-scribe
+
+[0.7.1]: https://www.npmjs.com/package/docs-scribe/v/0.7.1
+[0.7.0]: https://www.npmjs.com/package/docs-scribe/v/0.7.0
+[0.6.0]: https://www.npmjs.com/package/docs-scribe/v/0.6.0
 [0.5.0]: https://www.npmjs.com/package/docs-scribe/v/0.5.0
 [0.4.2]: https://www.npmjs.com/package/docs-scribe/v/0.4.2
 [0.4.1]: https://www.npmjs.com/package/docs-scribe/v/0.4.1
